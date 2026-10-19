@@ -13,7 +13,6 @@ namespace HoardFarm.Windows;
 
 public class MainWindow : Window
 {
-    private const int TargetProgress = 30000;
     private readonly Configuration conf = Config;
 
     public MainWindow()
@@ -91,7 +90,13 @@ public class MainWindow : Window
         using (_ = ImRaii.Disabled(!PluginInstalled(NavmeshIPC.Name)))
         {
             var enabled = HoardService.HoardMode;
-            if (ImGui.Checkbox(Strings.MainWindow_EnableHoardFarmMode, ref enabled)) HoardService.HoardMode = enabled;
+            if (ImGui.Checkbox(Strings.MainWindow_EnableHoardFarmMode, ref enabled))
+            {
+                if (enabled)
+                    HoardService.HoardMode = true;
+                else
+                    HoardService.StopAll(Strings.HoardFarm_StopReason_Manual);
+            }
         }
 
         if (!PluginInstalled(NavmeshIPC.Name))
@@ -204,14 +209,26 @@ public class MainWindow : Window
         ImGui.EndGroup();
         ImGui.Separator();
 
-        ImGui.Text(string.Format(Strings.MainWindow_Progress, Achievements.Progress, TargetProgress));
-        if (Achievements.Progress == 0)
+        var targetProgress = Achievements.Max > 0 ? Achievements.Max : ForTheHoardAchievementFallbackTarget;
+        if (Achievements.Max == 0)
+        {
+            ImGui.TextDisabled(string.Format(Strings.MainWindow_ProgressUnknown, targetProgress));
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip(Strings.MainWindow_ProgressUnknown_Help);
+        }
+        else
+            ImGui.Text(string.Format(Strings.MainWindow_Progress, Achievements.Progress, targetProgress));
+
+        if (Achievements.Max == 0)
+        {
+            // 進度不明時不估算剩餘時間。
+        }
+        else if (Achievements.Progress == 0)
             ImGui.Text(Strings.MainWindow_ProgressZero);
         else if (overallTimeAverage == 0)
             ImGui.Text(Strings.MainWindow_ProgressNoTime);
         else
         {
-            ImGui.TextWrapped(FormatRemaining((TargetProgress - Achievements.Progress) * overallTimeAverage));
+            ImGui.TextWrapped(FormatRemaining(Math.Max(0, targetProgress - Achievements.Progress) * overallTimeAverage));
         }
 
         if (HoardService.HoardModeError != string.Empty)

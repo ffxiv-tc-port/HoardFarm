@@ -5,20 +5,20 @@ using HoardFarm.Tasks.Base;
 
 namespace HoardFarm.Tasks;
 
-public class TeleportTask(uint aetherytId, uint targetTerritoryId) : BaseTask(15)
+public class TeleportTask(uint aetherytId, uint targetTerritoryId) : BaseTask
 {
     private bool teleportUsed;
 
     public override unsafe bool? Run()
     {
-        if (!teleportUsed && Player.Territory.Value.RowId != targetTerritoryId 
+        if (!teleportUsed && Player.Territory != targetTerritoryId 
                           && ActionManager.Instance()->GetActionStatus(ActionType.GeneralAction, 7) == 0)
         {
             Telepo.Instance()->Teleport(aetherytId, 0);
             teleportUsed = true;
         }
 
-        return Player.Territory.Value.RowId == targetTerritoryId && Player.Interactable && NotBusy();
+        return Player.Territory == targetTerritoryId && Player.Interactable && NotBusy();
     }
 
 }

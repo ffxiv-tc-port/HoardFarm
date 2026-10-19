@@ -1,55 +1,52 @@
-[![Build](https://github.com/Jukkales/HoardFarm/actions/workflows/build-plugin.yml/badge.svg)](https://github.com/Jukkales/HoardFarm/actions/workflows/build-plugin.yml)
-[![Github Downloads (total)](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fpuni.sh%2Fapi%2Frepository%2Fjukka&query=%24%5B1%5D.DownloadCount&label=Downloads&color=4DC71F
-)]()
-[![Last Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fpuni.sh%2Fapi%2Frepository%2Fjukka&query=%24%5B1%5D.AssemblyVersion&label=release
-)]()
-[![Last Commit](https://img.shields.io/github/last-commit/Jukkales/HoardFarm)]()
+# HoardFarm
 
-[![image](https://discordapp.com/api/guilds/1001823907193552978/embed.png?style=banner2)](https://discord.gg/Zzrcc8kmvy)
+[HoardFarm](https://github.com/Jukkales/HoardFarm) 的台服移植版。在天之御柱反覆挖埋藏的寶藏，協助達成成就「埋藏的寶藏6」（發現埋藏的寶藏 20000 個）。
 
-### Want to help with localization?
-https://crowdin.com/project/hoardfarm
+## 安全條件
 
-# Hoard Farm
-DETECTABLE - DO NOT USE IT ANYMORE
+- **手動按開始之後才接手**：只有按下「啟用刷寶模式」或輸入 `/hoardfarm enable`／`toggle` 才會開始；預設關閉，載入插件、換區、登入都不會自動開始
+- **急停**：取消勾選、`/hoardfarm stop`、登出、卸載插件，或其他插件呼叫 IPC `HoardFarm.StopAll` 時立刻停下（不等這一趟跑完）
+- **不送任何資料給作者或第三方**：刷寶紀錄只存在本機
+- 是／否確認框只按「確定要退出任務嗎？」與「確定要進入嗎？」兩種；「任務準備完成」只在自己剛選完存檔的 30 秒內按「參加」；其他確認框與視窗一律不碰
 
-<img src="https://raw.githubusercontent.com/Jukkales/HoardFarm/main/icon.png" width="100" height="100" align="left"> Overwhelmed that you have to find 20000 hoards to get "For the Hoard VI"?
+## 功能
 
-It takes ages if you run DeepDungeons normal and even if farmed specifically, it still takes hundreds of hours.
+- 開始後自動：傳送到紅玉海的自凝島、走到九星、用選好的存檔進入天之御柱、使用魔陶器、走去挖寶藏、退出任務，再重複
+- 必要時使用「魔陶器：感知寶藏」「魔陶器：隱形」，隱形用完時可改用「魔陶器：咒印解除」與魔石
+- **模式**：效率（到處搜尋，盡量挖到每一個寶藏）／安全（寶藏走不到就立刻離開）
+- **停止條件**：跑到指定趟數、找到指定數量的寶藏，或經過指定分鐘數
+- **處理僱員**（選用）：兩趟之間若有僱員探險完成（任一或全部），傳送到利姆薩・羅敏薩下層甲板交給 AutoRetainer 處理
+- **統計**：本次與累計的趟數、找到數量、時間，並顯示成就進度與估計剩餘時間
+- 可在九星的深層迷宮選單旁顯示「開啟 HoardFarm」按鈕
 
-This little assistant will help you getting the achievement faster _(by doing it for you)_.
+## 使用前準備
 
-**YOU WILL NEEED [vnavmesh](https://github.com/awgil/ffxiv_navmesh) FOR THIS!**
-Check the [Installation Guide](https://github.com/Jukkales/HoardFarm/blob/main/INSTALL.md) for more information.
+- 天之御柱存檔要在第 11 層以後，身上至少要有一個「魔陶器：感知寶藏」與一個「魔陶器：隱形」（隱形越多越安全）
+- 在主視窗選好存檔、模式與停止條件，再按「啟用刷寶模式」
 
-## Features
-- Fully automatic hoard farming
-- Moves to HoH
-- Enters HoH
-- Searches and Move to Hoards
-- Leaves and repeat
-- ... oh and statictics!
-- Being imperfect
+## 指令
 
-## Usage
+- `/hoardfarm`：開啟主視窗
+- `/hoardfarm config`（`c`）：開啟設定視窗
+- `/hoardfarm enable`（`e`）：開始刷寶
+- `/hoardfarm disable`（`d`）：這一趟跑完再停
+- `/hoardfarm toggle`（`t`）：切換刷寶模式
+- `/hoardfarm stop`（`s`）：立即全部停止
 
-You need to have an prepared Heaven on High Save at Floor 11 or 21 with at least **one Pomander of Intuition** and **one Pomaner of Concealment**.
-Having more Pomanders of Concealment makes it more safe, but is not required. The Plugin can also use Pomander of Safety and Magicites when Vanish runs out.
+## 台服版的修改
 
-Just select your save slot, hit start and watch it running. It will stop one it reaches you selected stop condition.
+- 新增急停（`/hoardfarm stop`、登出、卸載、`HoardFarm.StopAll` IPC）
+- 拿掉把刷寶紀錄送到原作者統計伺服器的功能，以及「慢速模式」的隨機等待
+- 確認框只按「退出任務」與「進入深層迷宮」兩種，不再對任何開著的確認框按「是」；「任務準備完成」只在自己剛選完存檔後才按
+- 只在天之御柱裡才會退出任務，不會在你自己打天之御柱或排別的任務時把你退出
+- 九星太遠時先走近；傳送沒成功時不會在別的區域亂走
+- 成就進度改用台服有的「埋藏的寶藏6」（20000 個）
+- 停止或僱員處理逾時時，AutoRetainer 還在操作的話不再替它關掉僱員清單
+- 介面繁體中文化（台服客戶端預設繁中，語言設定只影響本插件）
 
-![image](images/pomander.png)
+## 需要搭配的插件
 
-### Educational Purpose
+- 必要：vnavmesh（移動與尋路）
+- 選用：AutoRetainer（兩趟之間處理僱員）
 
-I mainly created this plugin for me to learn whats possible and how to do it. 
-I like to learn and understanding things deeply, especially automation.
-This plugin is not intended to be used for botting.
-Somehow i can understand to use it because 20000 hoards is way over the top what SE should ask for an achievement.
-
-Personally i dont care if you bot trough the game _(and even SE dont care as long you dont make videos of it lol)_.
-
-I'm not responsible for any bans or anything else that could happen to you. (really, dont make videos of it or stream it)
-
----
-_Special thanks to Leonhart for making the icon!_
+原作者：[Jukkales](https://github.com/Jukkales)

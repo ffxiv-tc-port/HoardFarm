@@ -10,7 +10,7 @@ public class MoveToHoHTask : IBaseTaskGroup
         return [
             new TeleportTask(OnokoroAetherytId, RubySeaMapId),
             new MountTask(),
-            new PathfindTask(KyuseiLocation)
+            new PathfindTask(KyuseiLocation, territory: RubySeaMapId)
         ];
     }
 }

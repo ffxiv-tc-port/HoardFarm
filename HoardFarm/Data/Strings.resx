@@ -36,13 +36,6 @@
     <data name="ConfigWindow_OpenHoardfarmOverlay" xml:space="preserve">
         <value>Show "Open Hoardfarm"-Overlay</value>
     </data>
-    <data name="ConfigWindow_SlowMode" xml:space="preserve">
-        <value>Slower mode</value>
-    </data>
-    <data name="ConfigWindow_SlowMode_Help" xml:space="preserve">
-        <value>Slow mode will wait some seconds before requeue again.
-Not really necessary, but makes some people feel better.</value>
-    </data>
     <data name="DeepDungeonMenuOverlay_OpenHoardfarm" xml:space="preserve">
         <value>Open Hoardfarm</value>
     </data>
@@ -167,8 +160,9 @@ It will take longer overall.</value>
         <value>Opens the Hoard Farm window.
 /hoardfarm config | c → Open the config window.
 /hoardfarm enable | e → Enable farming mode.
-/hoardfarm disable | d → Disable farming mode.
+/hoardfarm disable | d → Stop after the current run.
 /hoardfarm toggle | t → Toggle farming mode.
+/hoardfarm stop | s → Stop everything immediately (does not finish the current run).
 </value>
     </data>
     <data name="HoardFarm_Status_Running" xml:space="preserve">
@@ -179,6 +173,9 @@ It will take longer overall.</value>
     </data>
     <data name="HoardFarm_Status_Unreachable" xml:space="preserve">
         <value>Unreachable</value>
+    </data>
+    <data name="HoardFarm_Status_UsingMagicite" xml:space="preserve">
+        <value>Using magicite</value>
     </data>
     <data name="HoardFarm_Status_SearchingObject" xml:space="preserve">
         <value>Searching {0}</value>
@@ -222,6 +219,9 @@ and one Concealment.</value>
     <data name="HoardFarm_Status_Waiting" xml:space="preserve">
         <value>Waiting</value>
     </data>
+    <data name="HoardFarm_Status_InDutyQueue" xml:space="preserve">
+        <value>In Duty Finder queue</value>
+    </data>
     <data name="HoardFarm_Status_HoardFound" xml:space="preserve">
         <value>Hoard Found</value>
     </data>
@@ -233,15 +233,6 @@ and one Concealment.</value>
     </data>
     <data name="HoardFarm_Status_Leaving" xml:space="preserve">
         <value>Leaving</value>
-    </data>
-    <data name="ConfigWindow_WaitBetween" xml:space="preserve">
-        <value>Wait between:</value>
-    </data>
-    <data name="ConfigWindow_Seconds" xml:space="preserve">
-        <value>%d seconds</value>
-    </data>
-    <data name="ConfigWindow_And" xml:space="preserve">
-        <value>and</value>
     </data>
     <data name="ConfigWindow_Language" xml:space="preserve">
         <value>Language:</value>
@@ -267,13 +258,43 @@ and one Concealment.</value>
     <data name="ConfigWindow_Language_zh" xml:space="preserve">
         <value>Chinese</value>
     </data>
-    <data name="ConfigWindow_DisableStatisticGathering" xml:space="preserve">
-        <value>Disable statistic gathering</value>
+    <data name="HoardFarm_Status_Stopped" xml:space="preserve">
+        <value>Stopped ({0})</value>
     </data>
-    <data name="ConfigWindow_DisableStatisticGathering_Help" xml:space="preserve">
-        <value>Disables global gathering of runtimes and found hoards.
-Purely used to build a accurate global statistic.
-Only sends time of a run, if a hoard is found and the travel time to hoard.
-Character, timestamp or any other identifying info will NEVER send!</value>
+    <data name="HoardFarm_StopReason_Unload" xml:space="preserve">
+        <value>plugin unloaded</value>
+    </data>
+    <data name="HoardFarm_StopReason_Logout" xml:space="preserve">
+        <value>logged out</value>
+    </data>
+    <data name="HoardFarm_StopReason_Command" xml:space="preserve">
+        <value>/hoardfarm stop</value>
+    </data>
+    <data name="HoardFarm_StopReason_Manual" xml:space="preserve">
+        <value>stopped manually</value>
+    </data>
+    <data name="HoardFarm_Status_Error_NotLeaving" xml:space="preserve">
+        <value>The plugin did not abandon this run; leave it yourself if you want to.</value>
+    </data>
+    <data name="ConfigWindow_Language_zhHant" xml:space="preserve">
+        <value>Traditional Chinese</value>
+    </data>
+    <data name="MainWindow_ProgressUnknown" xml:space="preserve">
+        <value>Progress: ? / {0}</value>
+    </data>
+    <data name="MainWindow_ProgressUnknown_Help" xml:space="preserve">
+        <value>No achievement progress received yet (it is requested when this window opens).</value>
+    </data>
+    <data name="ConfigWindow_LeaveDelayAfterIntuition" xml:space="preserve">
+        <value>Wait before leaving after Intuition (seconds):</value>
+    </data>
+    <data name="ConfigWindow_LeaveDelayAfterHoard" xml:space="preserve">
+        <value>Wait before leaving after finding the hoard (seconds):</value>
+    </data>
+    <data name="ConfigWindow_LeaveDelay_Help" xml:space="preserve">
+        <value>Fixed number of seconds, no randomness. 0 = leave immediately. Stopping the farm cancels the wait at once.</value>
+    </data>
+    <data name="HoardFarm_Status_LeavingIn" xml:space="preserve">
+        <value>{0} (leaving in {1}s)</value>
     </data>
 </root>

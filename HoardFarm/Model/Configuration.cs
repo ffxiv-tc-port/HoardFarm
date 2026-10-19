@@ -16,18 +16,16 @@ public class Configuration : IPluginConfiguration
     public int OverallFoundHoards;
     public int OverallTime;
     public bool ShowOverlay = true;
-    public bool ParanoidMode;
-    public int MinWaitTime = 3;
-    public int MaxWaitTime = 6;
-    
+
     public bool DoRetainers;
     public int RetainerMode = 1;
-    
+
+    // 退出前固定等待秒數，0＝不等；刻意不加隨機（不移植原作者躲偵測用的隨機等待）。
+    public int LeaveDelayAfterIntuition = 5;
+    public int LeaveDelayAfterHoard = 3;
+    public const int LeaveDelayMax = 60;
+
     public string Language { get; set; } = "";
-    
-    public string? UniqueId { get; set; }
-    
-    public bool DisableStatisticCollection = false;
 
     public void Save()
     {

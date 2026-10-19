@@ -1,19 +1,20 @@
 {
     "Author": "Jukkales",
     "Name": "HoardFarm",
-    "Punchline": "Become an accursed Hoarder!",
-    "Description": "Plugin to help farming DeepDungeon Hoards (...for you)",
+    "Punchline": "在天之御柱自動反覆挖埋藏的寶藏",
+    "Description": "手動按下開始後，自動傳送到紅玉海找九星、進出天之御柱（需事先準備好第 11 層以後的存檔）、使用魔陶器「感知寶藏」「隱形」，走去挖埋藏的寶藏後退出，再重複下一趟；可設定趟數、寶藏數或時間上限，兩趟之間也能交給 AutoRetainer 處理僱員。需要 vnavmesh。預設關閉，載入、進區、登入都不會自己開始；隨時可以取消勾選、/hoardfarm stop 或 TC Toolbox 的全艦隊急停立即停下。不會把任何資料送給原作者或第三方。",
     "InternalName": "HoardFarm",
     "ApplicableVersion": "any",
-    "DalamudApiLevel": 14,
+    "DalamudApiLevel": 13,
     "Tags": [
         "hoard",
         "farm",
-        "help",
-        "hoarder",
-        "accursed",
-        "achievement"
+        "deep dungeon",
+        "深層迷宮",
+        "天之御柱",
+        "埋藏的寶藏"
     ],
-    "RepoUrl": "https://github.com/Jukkales/HoardFarm",
-    "IconUrl": "https://github.com/Jukkales/HoardFarm/raw/main/icon.png"
+    "RepoUrl": "https://github.com/ffxiv-tc-port/HoardFarm",
+    "IconUrl": "https://raw.githubusercontent.com/ffxiv-tc-port/DalamudPluginsTC/main/icons/HoardFarm.png",
+    "AcceptsFeedback": false
 }

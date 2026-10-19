@@ -28,9 +28,6 @@ public class ConfigWindow() : Window(Strings.ConfigWindow_Title, ImGuiWindowFlag
             });
 
         ImGui.PopStyleColor(3);
-        if (ImGui.Button("Want to help with localization?"))
-            Process.Start(new ProcessStartInfo
-                              { FileName = "https://crowdin.com/project/hoardfarm", UseShellExecute = true });
         ImGui.Spacing();
         ImGui.Separator();
         if (ImGui.Button(Strings.ConfigWindow_ResetStatistics))
@@ -55,20 +52,7 @@ public class ConfigWindow() : Window(Strings.ConfigWindow_Title, ImGuiWindowFlag
                 {
                     Config.Language = language.Key;
                     Config.Save();
-                    if (language.Key == "")
-                    {
-                        CultureInfo.DefaultThreadCurrentUICulture = ClientState.ClientLanguage switch
-                        {
-                            ClientLanguage.French => CultureInfo.GetCultureInfo("fr"),
-                            ClientLanguage.German => CultureInfo.GetCultureInfo("de"),
-                            ClientLanguage.Japanese => CultureInfo.GetCultureInfo("ja"),
-                            _ => CultureInfo.GetCultureInfo("en")
-                        };
-                    }
-                    else
-                    {
-                        CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo(Config.Language);
-                    }
+                    HoardFarm.ApplyLanguage();
                 }
             }
             ImGui.EndCombo();
@@ -78,54 +62,25 @@ public class ConfigWindow() : Window(Strings.ConfigWindow_Title, ImGuiWindowFlag
         {
             Config.Save();
         }
-        
-        if (ImGui.Checkbox(Strings.ConfigWindow_DisableStatisticGathering, ref Config.DisableStatisticCollection))
-        {
-            Config.Save();
-        }
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        DrawLeaveDelay(Strings.ConfigWindow_LeaveDelayAfterIntuition, "##leaveDelayAfterIntuition", ref Config.LeaveDelayAfterIntuition);
+        DrawLeaveDelay(Strings.ConfigWindow_LeaveDelayAfterHoard, "##leaveDelayAfterHoard", ref Config.LeaveDelayAfterHoard);
+    }
+
+    private static void DrawLeaveDelay(string label, string id, ref int seconds)
+    {
+        ImGui.Text(label);
         ImGui.SameLine();
-        ImGui.PushFont(UiBuilder.IconFont);
-        ImGui.Text(FontAwesomeIcon.QuestionCircle.ToIconString());
-        ImGui.PopFont();
-        if (ImGui.IsItemHovered())
+        ImGui.SetNextItemWidth(100);
+        if (ImGui.InputInt(id, ref seconds))
         {
-            ImGui.SetTooltip(Strings.ConfigWindow_DisableStatisticGathering_Help);
-        }
-        
-        if (ImGui.Checkbox(Strings.ConfigWindow_SlowMode, ref Config.ParanoidMode))
-        {
+            seconds = Math.Clamp(seconds, 0, Model.Configuration.LeaveDelayMax);
             Config.Save();
-        }
-        ImGui.SameLine();
-        ImGui.PushFont(UiBuilder.IconFont);
-        ImGui.Text(FontAwesomeIcon.QuestionCircle.ToIconString());
-        ImGui.PopFont();
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.SetTooltip(Strings.ConfigWindow_SlowMode_Help);
         }
 
-        if (Config.ParanoidMode)
-        {
-            ImGui.Indent();
-            ImGui.Text(Strings.ConfigWindow_WaitBetween);
-            ImGui.SetNextItemWidth(80);
-            if (ImGui.SliderInt("###MinWait", ref Config.MinWaitTime, 0, 10, Strings.ConfigWindow_Seconds))
-            {
-                if (Config.MinWaitTime > Config.MaxWaitTime) Config.MinWaitTime = Config.MaxWaitTime;
-                Config.Save();
-            }
-            ImGui.SameLine();
-            ImGui.Text(Strings.ConfigWindow_And);
-            ImGui.SameLine();
-            ImGui.SetNextItemWidth(80);
-            if (ImGui.SliderInt("###MaxWait", ref Config.MaxWaitTime, 0, 20, Strings.ConfigWindow_Seconds))
-            {
-                if (Config.MaxWaitTime < Config.MinWaitTime) Config.MaxWaitTime = Config.MinWaitTime;
-                Config.Save();
-            }
-            ImGui.Unindent();
-        }
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(Strings.ConfigWindow_LeaveDelay_Help);
     }
     
     private List<KeyValuePair<String, String>> GetLanguages()
@@ -139,6 +94,7 @@ public class ConfigWindow() : Window(Strings.ConfigWindow_Title, ImGuiWindowFlag
                 new KeyValuePair<string, string>("en", Strings.ConfigWindow_Language_en),
                 new KeyValuePair<string, string>("fr", Strings.ConfigWindow_Language_fr),
                 new KeyValuePair<string, string>("ja", Strings.ConfigWindow_Language_ja),
+                new KeyValuePair<string, string>("zh-Hant", Strings.ConfigWindow_Language_zhHant),
                 new KeyValuePair<string, string>("zh", Strings.ConfigWindow_Language_zh),
                 new KeyValuePair<string, string>("ko", Strings.ConfigWindow_Language_ko),
             }

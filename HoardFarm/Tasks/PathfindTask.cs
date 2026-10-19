@@ -8,11 +8,15 @@ using HoardFarm.Tasks.Base;
 
 namespace HoardFarm.Tasks;
 
-public class PathfindTask(Vector3 targetPosition, bool sprint = false, float toleranceDistance = 3f, int timeout = 60)
-    : BaseTask(timeout)
+// territory 有值時，人不在那一區就直接略過（座標只在那一區有意義；例如傳送沒成功時不要在別區亂走）。
+public class PathfindTask(Vector3 targetPosition, bool sprint = false, float toleranceDistance = 3f, uint? territory = null)
+    : BaseTask
 {
     public override unsafe bool? Run()
     {
+        if (territory.HasValue && Player.Territory != territory.Value)
+            return true;
+
         if (targetPosition.Distance(Player.Position) <= toleranceDistance)
         {
             NavmeshIPC.PathStop();

@@ -60,36 +60,6 @@ namespace HoardFarm.Data {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to and.
-        /// </summary>
-        internal static string ConfigWindow_And {
-            get {
-                return ResourceManager.GetString("ConfigWindow_And", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Disable statistic gathering.
-        /// </summary>
-        internal static string ConfigWindow_DisableStatisticGathering {
-            get {
-                return ResourceManager.GetString("ConfigWindow_DisableStatisticGathering", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Disables global gathering of runtimes and found hoards.
-        ///Purely used to build a accurate global statistic.
-        ///Only sends time of a run, if a hoard is found and the travel time to hoard.
-        ///Character, timestamp or any other identifying info will NEVER send!.
-        /// </summary>
-        internal static string ConfigWindow_DisableStatisticGathering_Help {
-            get {
-                return ResourceManager.GetString("ConfigWindow_DisableStatisticGathering_Help", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Actually no really much to configure here..
         /// </summary>
         internal static string ConfigWindow_GreetingText {
@@ -189,34 +159,6 @@ namespace HoardFarm.Data {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to %d seconds.
-        /// </summary>
-        internal static string ConfigWindow_Seconds {
-            get {
-                return ResourceManager.GetString("ConfigWindow_Seconds", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Slower mode.
-        /// </summary>
-        internal static string ConfigWindow_SlowMode {
-            get {
-                return ResourceManager.GetString("ConfigWindow_SlowMode", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Slow mode will wait some seconds before requeue again.
-        ///Not really necessary, but makes some people feel better..
-        /// </summary>
-        internal static string ConfigWindow_SlowMode_Help {
-            get {
-                return ResourceManager.GetString("ConfigWindow_SlowMode_Help", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Support on Ko-fi.
         /// </summary>
         internal static string ConfigWindow_SupportKofi {
@@ -240,15 +182,6 @@ namespace HoardFarm.Data {
         internal static string ConfigWindow_Title {
             get {
                 return ResourceManager.GetString("ConfigWindow_Title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Wait between:.
-        /// </summary>
-        internal static string ConfigWindow_WaitBetween {
-            get {
-                return ResourceManager.GetString("ConfigWindow_WaitBetween", resourceCulture);
             }
         }
         
@@ -441,11 +374,65 @@ namespace HoardFarm.Data {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Using magicite.
+        /// </summary>
+        internal static string HoardFarm_Status_UsingMagicite {
+            get {
+                return ResourceManager.GetString("HoardFarm_Status_UsingMagicite", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Wait before leaving after Intuition (seconds):
+        /// </summary>
+        internal static string ConfigWindow_LeaveDelayAfterIntuition {
+            get {
+                return ResourceManager.GetString("ConfigWindow_LeaveDelayAfterIntuition", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Wait before leaving after finding the hoard (seconds):
+        /// </summary>
+        internal static string ConfigWindow_LeaveDelayAfterHoard {
+            get {
+                return ResourceManager.GetString("ConfigWindow_LeaveDelayAfterHoard", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Fixed number of seconds, no randomness. 0 = leave immediately. Stopping the farm cancels the wait at once.
+        /// </summary>
+        internal static string ConfigWindow_LeaveDelay_Help {
+            get {
+                return ResourceManager.GetString("ConfigWindow_LeaveDelay_Help", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0} (leaving in {1}s)
+        /// </summary>
+        internal static string HoardFarm_Status_LeavingIn {
+            get {
+                return ResourceManager.GetString("HoardFarm_Status_LeavingIn", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Waiting.
         /// </summary>
         internal static string HoardFarm_Status_Waiting {
             get {
                 return ResourceManager.GetString("HoardFarm_Status_Waiting", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to In Duty Finder queue.
+        /// </summary>
+        internal static string HoardFarm_Status_InDutyQueue {
+            get {
+                return ResourceManager.GetString("HoardFarm_Status_InDutyQueue", resourceCulture);
             }
         }
         
@@ -794,6 +781,87 @@ namespace HoardFarm.Data {
         internal static string MainWindow_vnavmeshRequired {
             get {
                 return ResourceManager.GetString("MainWindow_vnavmeshRequired", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Stopped ({0}).
+        /// </summary>
+        internal static string HoardFarm_Status_Stopped {
+            get {
+                return ResourceManager.GetString("HoardFarm_Status_Stopped", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to plugin unloaded.
+        /// </summary>
+        internal static string HoardFarm_StopReason_Unload {
+            get {
+                return ResourceManager.GetString("HoardFarm_StopReason_Unload", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to logged out.
+        /// </summary>
+        internal static string HoardFarm_StopReason_Logout {
+            get {
+                return ResourceManager.GetString("HoardFarm_StopReason_Logout", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to /hoardfarm stop.
+        /// </summary>
+        internal static string HoardFarm_StopReason_Command {
+            get {
+                return ResourceManager.GetString("HoardFarm_StopReason_Command", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to stopped manually.
+        /// </summary>
+        internal static string HoardFarm_StopReason_Manual {
+            get {
+                return ResourceManager.GetString("HoardFarm_StopReason_Manual", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The plugin did not abandon this run; leave it yourself if you want to..
+        /// </summary>
+        internal static string HoardFarm_Status_Error_NotLeaving {
+            get {
+                return ResourceManager.GetString("HoardFarm_Status_Error_NotLeaving", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Traditional Chinese.
+        /// </summary>
+        internal static string ConfigWindow_Language_zhHant {
+            get {
+                return ResourceManager.GetString("ConfigWindow_Language_zhHant", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Progress: ? / {0}.
+        /// </summary>
+        internal static string MainWindow_ProgressUnknown {
+            get {
+                return ResourceManager.GetString("MainWindow_ProgressUnknown", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No achievement progress received yet (it is requested when this window opens)..
+        /// </summary>
+        internal static string MainWindow_ProgressUnknown_Help {
+            get {
+                return ResourceManager.GetString("MainWindow_ProgressUnknown_Help", resourceCulture);
             }
         }
     }

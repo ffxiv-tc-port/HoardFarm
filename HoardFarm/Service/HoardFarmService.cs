@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
@@ -18,8 +16,8 @@ using HoardFarm.IPC;
 using HoardFarm.Model;
 using HoardFarm.Tasks;
 using HoardFarm.Tasks.TaskGroups;
+using HoardFarm.Utils;
 using Lumina.Excel.Sheets;
-using Newtonsoft.Json;
 
 namespace HoardFarm.Service;
 
@@ -34,20 +32,25 @@ public class HoardFarmService : IDisposable
     private bool hoardAvailable;
 
     private bool hoardFound;
-    private bool hoardModeActive;
+    // volatile：IsRunning 會從 IPC（任何執行緒）讀；寫入仍只在 framework 執行緒。
+    private volatile bool hoardModeActive;
     public string HoardModeError = "";
 
     public string HoardModeStatus = "";
     private Vector3 hoardPosition = Vector3.Zero;
     private bool intuitionUsed;
-    private bool? lastHoardCollected;
-    private bool? lastHoardFound;
+    // 每層只決定一次「找到寶藏後用魔石還是隱形」；魔石確認用掉後這一層移動時不再補隱形。
+    private bool hoardCoverChosen;
+    private bool magiciteCoverUsed;
+    private DateTime magiciteTaskUntil = DateTime.MinValue;
+    // 已排了退出（含退出前的固定等待）；之後到換層為止，戰鬥中不再自動用魔石。
+    private bool leaveDecided;
     private DateTime lastTick = DateTime.Now;
-    private DateTime? movementEnd;
-    private DateTime? movementStart;
     private bool movingToHoard;
 
-    private bool running;
+    private volatile bool running;
+    // 按開始時人已經在天之御柱裡＝那一趟是使用者自己進的；離開天之御柱之前，出錯也不替他放棄任務。
+    private bool startedInUserRun;
     private DateTime runStarted;
     private bool safetyUsed;
     private bool searchMode;
@@ -55,19 +58,26 @@ public class HoardFarmService : IDisposable
     public int SessionRuns;
     public int SessionTime;
 
-    private ushort? currentTerritoryType;
-
-    private DateTime? timingStart;
+    // 由 IPC（任何執行緒）寫入、framework 執行緒在下一幀取走；null＝沒有待處理的外部停止。
+    private string? pendingExternalStop;
 
     public HoardFarmService()
     {
-        hoardFoundMessage = DataManager.GetExcelSheet<LogMessage>().GetRow(7274).Text.ToDalamudString().GetText();
-        senseHoardMessage = DataManager.GetExcelSheet<LogMessage>().GetRow(7272).Text.ToDalamudString().GetText();
-        noHoardMessage = DataManager.GetExcelSheet<LogMessage>().GetRow(7273).Text.ToDalamudString().GetText();
+        hoardFoundMessage = LogMessageText(HoardFoundLogMessageId);
+        senseHoardMessage = LogMessageText(SenseHoardLogMessageId);
+        noHoardMessage = LogMessageText(NoHoardLogMessageId);
 
         ClientState.TerritoryChanged += OnMapChange;
+        ClientState.Logout += OnLogout;
 
         Framework.Update += OnTick;
+    }
+
+    // 列不存在時回空字串；空字串永遠不會被當成命中（見 OnChatMessage）。
+    private static string LogMessageText(uint rowId)
+    {
+        var row = DataManager.GetExcelSheet<LogMessage>().GetRowOrDefault(rowId);
+        return row == null ? "" : NormalizeGameText(row.Value.Text.ToDalamudString().GetText());
     }
 
     public bool HoardMode
@@ -75,6 +85,8 @@ public class HoardFarmService : IDisposable
         get => hoardModeActive;
         set
         {
+            // 設成原本的值不重來：重複開始會把聊天處理器掛兩次，停止時只拆得掉一個。
+            if (value == hoardModeActive) return;
             hoardModeActive = value;
             if (hoardModeActive)
                 EnableFarm();
@@ -83,23 +95,70 @@ public class HoardFarmService : IDisposable
         }
     }
 
+    /// <summary>
+    /// 自動流程是否在跑（按開始後到停止／跑完為止，含進出天之御柱之間的空檔）。
+    /// 任何執行緒都可以讀：只讀兩個 volatile 欄位，不碰任務佇列與遊戲物件。
+    /// </summary>
+    public bool IsRunning => hoardModeActive || running;
+
     public void Dispose()
     {
+        if (hoardModeActive || running)
+            StopAll(Strings.HoardFarm_StopReason_Unload);
+
         ChatGui.ChatMessage -= OnChatMessage;
         ClientState.TerritoryChanged -= OnMapChange;
+        ClientState.Logout -= OnLogout;
         Framework.Update -= OnTick;
+    }
+
+    /// <summary>任何執行緒都可以呼叫；在 framework 執行緒上當場停，否則排到下一幀。</summary>
+    public void RequestStopAll(string? source)
+    {
+        var label = string.IsNullOrWhiteSpace(source) ? "?" : source.Trim();
+        if (Framework.IsInFrameworkUpdateThread)
+        {
+            StopAll(label);
+            return;
+        }
+
+        Interlocked.Exchange(ref pendingExternalStop, label);
+    }
+
+    /// <summary>立刻停下所有動作（不等這一趟跑完）。只在 framework 執行緒呼叫。</summary>
+    public void StopAll(string reason)
+    {
+        var wasRunning = hoardModeActive || running;
+        hoardModeActive = false;
+        DisableFarm();
+        HoardModeStatus = wasRunning ? string.Format(Strings.HoardFarm_Status_Stopped, reason) : HoardModeStatus;
+        PluginLog.Information($"[HoardFarm] 全部停止（{reason}）：{(wasRunning ? "原本在跑，已中止任務佇列與導航" : "原本就沒在跑")}");
     }
 
     private void DisableFarm()
     {
+        var wasRunning = running;
         running = false;
         TaskManager.Abort();
-        // GatherData(); Discard - might be inaccurate
         HoardModeStatus = "";
         ChatGui.ChatMessage -= OnChatMessage;
         Reset();
 
+        // 沒在跑時不碰 vnavmesh：那時的導航是別的插件或使用者自己的。
+        if (wasRunning)
+        {
+            NavmeshIPC.PathfindCancelAll();
+            NavmeshIPC.PathStop();
+        }
+
         if (RetainerScv.Running) RetainerScv.FinishProcess();
+        EnableIfNeeded();
+    }
+
+    private void OnLogout(int type, int code)
+    {
+        if (hoardModeActive || running)
+            StopAll(Strings.HoardFarm_StopReason_Logout);
     }
 
     private void EnableFarm()
@@ -108,9 +167,11 @@ public class HoardFarmService : IDisposable
         SessionTime = 0;
         SessionRuns = 0;
         SessionFoundHoards = 0;
+        startedInUserRun = InHoHDuty;
         running = true;
         HoardModeStatus = Strings.HoardFarm_Status_Running;
         HoardModeError = "";
+        ChatGui.ChatMessage -= OnChatMessage;
         ChatGui.ChatMessage += OnChatMessage;
     }
 
@@ -118,11 +179,16 @@ public class HoardFarmService : IDisposable
     {
         Config.Save();
         intuitionUsed = false;
+        hoardCoverChosen = false;
+        magiciteCoverUsed = false;
+        magiciteTaskUntil = DateTime.MinValue;
+        leaveDecided = false;
         hoardFound = false;
         hoardPosition = Vector3.Zero;
         movingToHoard = false;
         hoardAvailable = false;
         searchMode = false;
+        visitedObjectIds.Clear();
         FinishRun = false;
         safetyUsed = false;
         objectPositions.Clear();
@@ -170,6 +236,10 @@ public class HoardFarmService : IDisposable
 
     private void OnTick(IFramework framework)
     {
+        var external = Interlocked.Exchange(ref pendingExternalStop, null);
+        if (external != null)
+            StopAll(external);
+
         if (!running || DateTime.Now - lastTick < TimeSpan.FromSeconds(1))
             return;
 
@@ -194,7 +264,8 @@ public class HoardFarmService : IDisposable
         UpdateObjectPositions();
         SafetyChecks();
 
-        if (searchMode && hoardPosition == Vector3.Zero)
+        // searchMode 只在進天之御柱時重置；逾時或死亡退出後回到紅玉海時它還是 true。
+        if (searchMode && InHoH && hoardPosition == Vector3.Zero)
         {
             if (!SearchLogic())
                 return;
@@ -205,17 +276,17 @@ public class HoardFarmService : IDisposable
             if (CheckDone() && !FinishRun)
             {
                 FinishRun = true;
-                GatherData();
                 return;
             }
 
-            if (Player.Territory.Value.RowId == HoHMapId1)
+            if (Player.Territory == HoHMapId1)
             {
                 Error(Strings.HoardFarm_Status_Error_Unprepared);
                 return;
             }
 
-            if (!InHoH && !InRubySea && NotBusy() && !KyuseiInteractable())
+            // 人在紅玉海但離九星太遠時也要走過去，否則沒有任何分支會接手。
+            if (!InHoH && NotBusy() && !KyuseiInteractable())
             {
                 HoardModeStatus = Strings.HoardFarm_Status_MoveToHoH;
                 Enqueue(new MoveToHoHTask());
@@ -226,8 +297,8 @@ public class HoardFarmService : IDisposable
             {
                 if (FinishRun)
                 {
-                    HoardModeStatus = Strings.HoardFarm_Status_Finished;
                     HoardMode = false;
+                    HoardModeStatus = Strings.HoardFarm_Status_Finished;
                     return;
                 }
 
@@ -237,11 +308,14 @@ public class HoardFarmService : IDisposable
                     return;
                 }
 
-                GatherData();
-                timingStart = DateTime.Now;
+                // 已經在任務搜尋器排別的任務時不進場，等它排完或取消。
+                if (Svc.Condition[ConditionFlag.InDutyQueue])
+                {
+                    HoardModeStatus = Strings.HoardFarm_Status_InDutyQueue;
+                    return;
+                }
+
                 HoardModeStatus = Strings.HoardFarm_Status_EnteringHoH;
-                if (Config.ParanoidMode)
-                    EnqueueWait(Random.Shared.Next(Config.MinWaitTime * 1000, Config.MaxWaitTime * 1000));
                 Enqueue(new EnterHeavenOnHigh());
             }
 
@@ -266,7 +340,6 @@ public class HoardFarmService : IDisposable
                 {
                     if (hoardAvailable)
                     {
-                        lastHoardFound = true;
                         FindHoardPosition();
 
                         if (hoardPosition != Vector3.Zero)
@@ -277,7 +350,9 @@ public class HoardFarmService : IDisposable
                                 // {
                                 //     Enqueue(new UsePomanderTask(Pomander.Concealment, false), "Use Concealment");
                                 // }
-                                movementStart ??= DateTime.Now;
+                                // 魔石失敗時不必另外排隱形：移動中的 SafetyChecks 會照舊補。
+                                if (TryStartHoardMagicite(false))
+                                    return;
                                 Enqueue(new PathfindTask(hoardPosition, true, 1.5f), 60 * 1000, "Move to Hoard");
                                 movingToHoard = true;
                                 HoardModeStatus = Strings.HoardFarm_Status_MoveToHoard;
@@ -287,14 +362,14 @@ public class HoardFarmService : IDisposable
                         {
                             if (Config.HoardFarmMode == 1)
                             {
-                                LeaveDuty(Strings.HoardFarm_Status_Leaving);
+                                LeaveDuty(Strings.HoardFarm_Status_Leaving, Config.LeaveDelayAfterIntuition, "安全模式：看不到寶藏位置、不搜尋");
                                 return;
                             }
 
                             if (!hoardFound)
                             {
-                                movementStart = DateTime.Now;
-                                Enqueue(new UsePomanderTask(Pomander.Concealment), "Use Concealment");
+                                if (!TryStartHoardMagicite(true))
+                                    Enqueue(new UsePomanderTask(Pomander.Concealment), "Use Concealment");
                                 searchMode = true;
                                 return;
                             }
@@ -302,11 +377,11 @@ public class HoardFarmService : IDisposable
 
                         if (hoardFound)
                         {
-                            LeaveDuty(Strings.HoardFarm_Status_Leaving);
+                            LeaveDuty(Strings.HoardFarm_Status_Leaving, Config.LeaveDelayAfterHoard, "挖到寶藏");
                         }
                     }
                     else
-                        LeaveDuty(Strings.HoardFarm_Status_Leaving);
+                        LeaveDuty(Strings.HoardFarm_Status_Leaving, Config.LeaveDelayAfterIntuition, "這一層沒有寶藏");
                 }
             }
         }
@@ -316,7 +391,9 @@ public class HoardFarmService : IDisposable
     {
         if (InHoH && intuitionUsed)
         {
-            if (DateTime.Now.Subtract(runStarted).TotalSeconds > 130 && !Svc.Condition[ConditionFlag.InCombat])
+            // 退出那一串還在佇列裡就不再中止重排；跑完仍在層內（退出被擋）時才再送一次。
+            if (DateTime.Now.Subtract(runStarted).TotalSeconds > 130 && !Svc.Condition[ConditionFlag.InCombat]
+                && !(leaveDecided && TaskManager.IsBusy))
             {
                 TaskManager.Abort();
                 NavmeshIPC.PathStop();
@@ -328,7 +405,7 @@ public class HoardFarmService : IDisposable
             {
                 if (!Concealment)
                 {
-                    if (CanUsePomander(Pomander.Concealment))
+                    if (!magiciteCoverUsed && CanUsePomander(Pomander.Concealment))
                     {
                         if (EzThrottler.Check("Concealment"))
                         {
@@ -352,15 +429,50 @@ public class HoardFarmService : IDisposable
 
             if (Svc.Condition[ConditionFlag.InCombat])
             {
-                if (CanUseMagicite() && EzThrottler.Check("Magicite"))
+                if (DateTime.Now >= magiciteTaskUntil && CanUseMagicite() && EzThrottler.Check("Magicite"))
                 {
                     EzThrottler.Throttle("Magicite", 6000);
-                    new UseMagiciteTask().Run();
+                    if (leaveDecided)
+                        PluginLog.Information("[HoardFarm] 已決定退出，戰鬥中不自動用魔石");
+                    else
+                        new UseMagiciteTask().Run();
                 }
             }
 
             if (Svc.Condition[ConditionFlag.Unconscious]) LeaveDuty(Strings.HoardFarm_Status_PlayerDied);
         }
+    }
+
+    /// <summary>
+    /// 找到寶藏後、要用隱形之前呼叫；每層只決定一次。回 true＝已排魔石任務，這一幀不要再排別的。
+    /// concealmentOnFail＝魔石沒用出去時由任務自己補排隱形（搜尋模式用；直接走向寶藏時交給 SafetyChecks）。
+    /// </summary>
+    private unsafe bool TryStartHoardMagicite(bool concealmentOnFail)
+    {
+        if (hoardCoverChosen) return false;
+        hoardCoverChosen = true;
+
+        var dd = UseHoardMagiciteTask.DeepDungeon();
+        var blocked = UseHoardMagiciteTask.BlockReason(dd);
+        if (blocked != null)
+        {
+            PluginLog.Information($"[HoardFarm] 找到寶藏，不用魔石（{blocked}），用隱形");
+            return false;
+        }
+
+        var slot = MagicitePicker.PickSlot(dd->Magicite)!.Value;
+        PluginLog.Information(
+            $"[HoardFarm] 找到寶藏，先用魔石「{UseHoardMagiciteTask.MagiciteName(dd->Magicite[slot])}」而不用隱形（三格＝[{dd->Magicite[0]}, {dd->Magicite[1]}, {dd->Magicite[2]}]）");
+        HoardModeStatus = Strings.HoardFarm_Status_UsingMagicite;
+        magiciteTaskUntil = DateTime.Now.AddSeconds(45);
+        var floorRun = runStarted;
+        Enqueue(new UseHoardMagiciteTask(used =>
+        {
+            if (runStarted != floorRun) return;
+            magiciteCoverUsed = used;
+            magiciteTaskUntil = DateTime.MinValue;
+        }, concealmentOnFail), 45 * 1000, "Use Magicite");
+        return true;
     }
 
     private void UpdateObjectPositions()
@@ -373,6 +485,7 @@ public class HoardFarmService : IDisposable
     private bool CheckRetainer()
     {
         if (Config.DoRetainers
+            && RetainerApi.Ready
             && RetainerService.CheckRetainersDone(Config.RetainerMode == 1)
             && RetainerScv.CanRunRetainer())
         {
@@ -391,11 +504,35 @@ public class HoardFarmService : IDisposable
         return CanUsePomander(Pomander.Safety) && CanUseMagicite();
     }
 
-    private void LeaveDuty(string message)
+    /// <param name="delaySeconds">退出前固定等待秒數，0＝立刻。等待是佇列裡的一個任務，停止／急停的 Abort 會連它一起清掉。</param>
+    /// <param name="why">只用於等待那一行 log。</param>
+    private void LeaveDuty(string message, int delaySeconds = 0, string? why = null)
     {
         HoardModeStatus = message;
-        SessionRuns++;
-        Config.OverallRuns++;
+        if (!InHoHDuty) return;
+        // 趟數只在這一層第一次決定退出時算；退出被擋（例如戰鬥中）而重送時不再加。
+        if (!leaveDecided)
+        {
+            SessionRuns++;
+            Config.OverallRuns++;
+        }
+
+        leaveDecided = true;
+
+        delaySeconds = Math.Clamp(delaySeconds, 0, Configuration.LeaveDelayMax);
+        if (delaySeconds > 0)
+        {
+            PluginLog.Information($"[HoardFarm] {why ?? message}：退出前固定等 {delaySeconds} 秒");
+            var until = DateTime.Now.AddSeconds(delaySeconds);
+            Enqueue(() =>
+            {
+                var left = until - DateTime.Now;
+                if (left <= TimeSpan.Zero) return true;
+                HoardModeStatus = string.Format(Strings.HoardFarm_Status_LeavingIn, message, (int)Math.Ceiling(left.TotalSeconds));
+                return false;
+            }, (delaySeconds + 10) * 1000, "Wait before leaving");
+        }
+
         Enqueue(new LeaveDutyTask());
     }
 
@@ -403,8 +540,27 @@ public class HoardFarmService : IDisposable
     {
         HoardModeStatus = Strings.HoardFarm_Status_Error;
         HoardModeError = message;
+        if (startedInUserRun)
+        {
+            StopInUserRun(message);
+            return;
+        }
+
         FinishRun = true;
+        leaveDecided = true;
         Enqueue(new LeaveDutyTask());
+    }
+
+    // 只停下並說明，不放棄任務：要不要退出由使用者自己決定。
+    private void StopInUserRun(string message)
+    {
+        HoardModeError = message + "\n" + Strings.HoardFarm_Status_Error_NotLeaving;
+        PluginLog.Information($"[HoardFarm] 按開始時人已在天之御柱（地區 {Player.Territory}），無法執行，停止且不退出這一趟：{message.ReplaceLineEndings(" ")}");
+        // 先清 running：這一趟裡插件還沒送過導航，停止時不要取消使用者自己的 vnavmesh 路徑。
+        running = false;
+        HoardMode = false;
+        HoardModeStatus = Strings.HoardFarm_Status_Error;
+        ChatGui.Print($"[HoardFarm] {Strings.MainWindow_UnableToRun}{message.ReplaceLineEndings(" ")} {Strings.HoardFarm_Status_Error_NotLeaving}");
     }
 
     private void FindHoardPosition()
@@ -429,93 +585,48 @@ public class HoardFarmService : IDisposable
 
     private void OnMapChange(ushort territoryType)
     {
+        if (territoryType is not (HoHMapId1 or HoHMapId11 or HoHMapId21))
+            startedInUserRun = false;
+
         if (territoryType is HoHMapId11 or HoHMapId21)
         {
             Reset();
             HoardModeStatus = Strings.HoardFarm_Status_Waiting;
-            currentTerritoryType = territoryType;
         }
     }
 
     private void OnChatMessage(
         XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
     {
-        if (senseHoardMessage.Equals(message.TextValue))
+        // 沒在跑時一律不理：這裡會中止任務佇列並排「退出任務」，停止後殘留的處理器會把使用者自己的那一趟退掉。
+        if (!running) return;
+        var text = NormalizeGameText(message.TextValue);
+        if (text.Length == 0) return;
+
+        if (senseHoardMessage.Equals(text))
         {
             intuitionUsed = true;
             hoardAvailable = true;
             HoardModeStatus = Strings.HoardFarm_Status_HoardFound;
         }
 
-        if (noHoardMessage.Equals(message.TextValue))
+        if (noHoardMessage.Equals(text))
         {
             intuitionUsed = true;
             hoardAvailable = false;
             TaskManager.Abort();
-            LeaveDuty(Strings.HoardFarm_Status_NoHoard);
+            LeaveDuty(Strings.HoardFarm_Status_NoHoard, Config.LeaveDelayAfterIntuition, "這一層沒有寶藏");
         }
 
-        if (hoardFoundMessage.Equals(message.TextValue))
+        if (hoardFoundMessage.Equals(text))
         {
             hoardFound = true;
-            movementEnd = DateTime.Now;
-            lastHoardCollected = true;
             SessionFoundHoards++;
             Config.OverallFoundHoards++;
             Achievements.Progress++;
             TaskManager.Abort();
-            LeaveDuty(Strings.HoardFarm_Status_Done);
+            LeaveDuty(Strings.HoardFarm_Status_Done, Config.LeaveDelayAfterHoard, "挖到寶藏");
         }
-    }
-
-    private void GatherData()
-    {
-        if (timingStart != null)
-        {
-            var data = new CollectedData
-            {
-                Sender = Config.UniqueId!,
-                Runtime = (DateTime.Now - timingStart.Value).TotalMilliseconds,
-                TerritoryTyp = currentTerritoryType!.Value,
-                SafetyMode = Config.HoardFarmMode == 1
-            };
-
-            if (lastHoardFound.HasValue) data.HoardFound = lastHoardFound.Value;
-            if (lastHoardCollected.HasValue) data.HoardCollected = lastHoardCollected.Value;
-
-            if (movementStart.HasValue && movementEnd.HasValue)
-                data.MoveTime = (movementEnd.Value - movementStart.Value).TotalMilliseconds;
-
-            if (data.IsValid())
-            {
-                var json = JsonConvert.SerializeObject(data, Formatting.Indented,
-                   new JsonSerializerSettings
-                   {
-                       NullValueHandling = NullValueHandling.Ignore
-                   });
-                PluginLog.Information("Sending log: " + json);
-                Task.Factory.StartNew(async () =>
-                {
-                    using var client = new HttpClient();
-                    try
-                    {
-                        await client.PostAsync("https://ffxiv.jusrv.de/api/hoardfarm",
-                                               new StringContent(json, Encoding.UTF8, "application/json"));
-                    }
-                    catch (Exception e)
-                    {
-                        PluginLog.Debug(e, "Failed to send data to server");
-                    }
-                });
-            }
-        }
-
-
-        timingStart = null;
-        lastHoardFound = false;
-        lastHoardCollected = false;
-        movementStart = null;
-        movementEnd = null;
     }
 
     private record MapObject(uint ObjectId, uint DataId, Vector3 Position);

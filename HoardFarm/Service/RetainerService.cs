@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq;
-using System.Timers;
+using Dalamud.Plugin.Services;
 using AutoRetainerAPI.Configuration;
 using ECommons.DalamudServices;
 using ECommons.GameHelpers;
@@ -16,7 +16,7 @@ namespace HoardFarm.Service;
 public class RetainerService : IDisposable
 {
     public bool Running {get; private set;}
-    private readonly Timer updateTimer;
+    private long lastUpdate;
     private DateTime startedAt;
     private bool autoRetainerEnabled;
     private readonly AutoRetainerIPC autoRetainerIcp = new();
@@ -24,17 +24,24 @@ public class RetainerService : IDisposable
 
     private DateTime? autoRetainerRunningThreshold;
 
+    // 上游用 System.Timers.Timer，回呼跑在執行緒池上卻去碰 TaskManager、物件表與原生視窗；改掛框架更新。
     public RetainerService()
     {
-        updateTimer = new Timer();
-        updateTimer.Elapsed += OnTimerUpdate;
-        updateTimer.Interval = 1000;
-        updateTimer.Enabled = false;
+        Framework.Update += OnFrameworkUpdate;
     }
 
     public void Dispose()
     {
-        updateTimer.Dispose();
+        Framework.Update -= OnFrameworkUpdate;
+    }
+
+    private void OnFrameworkUpdate(IFramework framework)
+    {
+        if (!Running) return;
+        var now = Environment.TickCount64;
+        if (now - lastUpdate < 1000) return;
+        lastUpdate = now;
+        OnTimerUpdate();
     }
 
     public void StartProcess()
@@ -43,7 +50,6 @@ public class RetainerService : IDisposable
         {
             Running = true;
             autoRetainerEnabled = false;
-            updateTimer.Enabled = true;
             startedAt = DateTime.Now;
             retainerSense = GetRetainerSense();
             if (retainerSense)
@@ -74,21 +80,21 @@ public class RetainerService : IDisposable
         }
 
         Running = false;
-        updateTimer.Enabled = false;
 
-        if (CheckRetainerListOpen())
+        if (CheckRetainerListOpen() && !AutoRetainerBusyOrUnknown())
         {
             TryGetAddonByName<AtkUnitBase>("RetainerList", out var addon);
             addon->Close(true);
         }
     }
     
-    private unsafe void OnTimerUpdate(object? sender, ElapsedEventArgs e)
+    private unsafe void OnTimerUpdate()
     {
         if (DateTime.Now.Subtract(startedAt).TotalMinutes > 5)
         {
             PluginLog.Information("Retainer processing took too long. Stopping.");
             FinishProcess();
+            return;
         }
         
         if (!NavmeshIPC.NavIsReady())
@@ -98,7 +104,7 @@ public class RetainerService : IDisposable
 
         if (!TaskManager.IsBusy && Running && !AutoRetainerRunning())
         {
-            if (Player.Territory.Value.RowId != LimsaMapId)
+            if (Player.Territory != LimsaMapId)
             {
                 Enqueue(new TeleportTask(LimsaAetherytId, LimsaMapId), "Teleport to Limsa");
                 return;
@@ -135,6 +141,20 @@ public class RetainerService : IDisposable
             {
                 FinishProcess();
             }
+        }
+    }
+
+    // AutoRetainer 還在操作時不替它關僱員清單：它下一步可能正要按這個視窗，而關閉中的視窗被按＝原生崩潰。
+    // 問不到（沒載入、IPC 失敗）也當作忙，寧可留著清單。
+    private bool AutoRetainerBusyOrUnknown()
+    {
+        try
+        {
+            return autoRetainerIcp.IsBusy();
+        }
+        catch (Exception)
+        {
+            return true;
         }
     }
 
@@ -213,10 +233,20 @@ public class RetainerService : IDisposable
         return retainerSense;
     }
 
+    // AutoRetainer 沒有這個角色的資料或 IPC 失敗時回 false（＝不去跑僱員），不讓例外每秒打斷主迴圈。
     public static bool CheckRetainersDone(bool all = true)
     {
-        var data = RetainerApi.GetOfflineCharacterData(Svc.PlayerState.ContentId).RetainerData;
-        return all ? data.All(e => CheckIsDone(e.VentureEndsAt)) : data.Any(e => CheckIsDone(e.VentureEndsAt));
+        try
+        {
+            var data = RetainerApi.GetOfflineCharacterData(Svc.PlayerState.ContentId)?.RetainerData;
+            if (data == null || data.Count == 0) return false;
+            return all ? data.All(e => CheckIsDone(e.VentureEndsAt)) : data.Any(e => CheckIsDone(e.VentureEndsAt));
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Warning($"[HoardFarm] 讀不到 AutoRetainer 的僱員資料，這一輪不跑僱員：{ex.Message}");
+            return false;
+        }
     }
     
     private static bool CheckIsDone(long time)

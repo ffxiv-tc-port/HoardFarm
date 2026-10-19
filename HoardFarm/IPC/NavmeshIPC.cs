@@ -19,9 +19,10 @@ public static class NavmeshIPC
     private static ICallGateSubscriber<Vector3, Vector3, bool, Task<List<Vector3>>>? _navPathfind;
     private static ICallGateSubscriber<bool>? _navIsAutoLoad;
     private static ICallGateSubscriber<bool, object>? _navSetAutoLoad;
+    private static ICallGateSubscriber<object>? _navPathfindCancelAll;
 
     private static ICallGateSubscriber<Vector3, float, float, Vector3?>? _queryMeshNearestPoint;
-    private static ICallGateSubscriber<Vector3, float, Vector3?>? _queryMeshPointOnFloor;
+    private static ICallGateSubscriber<Vector3, bool, float, Vector3?>? _queryMeshPointOnFloor;
 
     private static ICallGateSubscriber<List<Vector3>, bool, object>? _pathMoveTo;
     private static ICallGateSubscriber<object>? _pathStop;
@@ -37,39 +38,38 @@ public static class NavmeshIPC
     private static ICallGateSubscriber<Vector3, bool, bool>? _pathfindAndMoveTo;
     private static ICallGateSubscriber<bool>? _pathfindInProgress;
 
+    // 只建訂閱端、不需要 vnavmesh 已載入；呼叫時才由 Execute 判斷它在不在。
     internal static void Init()
     {
-        if (PluginInstalled(Name))
+        try
         {
-            try
-            {
-                _navIsReady = PluginInterface.GetIpcSubscriber<bool>($"{Name}.Nav.IsReady");
-                _navBuildProgress = PluginInterface.GetIpcSubscriber<float>($"{Name}.Nav.BuildProgress");
-                _navReload = PluginInterface.GetIpcSubscriber<bool>($"{Name}.Nav.Reload");
-                _navRebuild = PluginInterface.GetIpcSubscriber<bool>($"{Name}.Nav.Rebuild");
-                _navPathfind = PluginInterface.GetIpcSubscriber<Vector3, Vector3, bool, Task<List<Vector3>>>($"{Name}.Nav.Pathfind");
-                _navIsAutoLoad = PluginInterface.GetIpcSubscriber<bool>($"{Name}.Nav.IsAutoLoad");
-                _navSetAutoLoad = PluginInterface.GetIpcSubscriber<bool, object>($"{Name}.Nav.SetAutoLoad");
+            _navIsReady = PluginInterface.GetIpcSubscriber<bool>($"{Name}.Nav.IsReady");
+            _navBuildProgress = PluginInterface.GetIpcSubscriber<float>($"{Name}.Nav.BuildProgress");
+            _navReload = PluginInterface.GetIpcSubscriber<bool>($"{Name}.Nav.Reload");
+            _navRebuild = PluginInterface.GetIpcSubscriber<bool>($"{Name}.Nav.Rebuild");
+            _navPathfind = PluginInterface.GetIpcSubscriber<Vector3, Vector3, bool, Task<List<Vector3>>>($"{Name}.Nav.Pathfind");
+            _navIsAutoLoad = PluginInterface.GetIpcSubscriber<bool>($"{Name}.Nav.IsAutoLoad");
+            _navSetAutoLoad = PluginInterface.GetIpcSubscriber<bool, object>($"{Name}.Nav.SetAutoLoad");
+            _navPathfindCancelAll = PluginInterface.GetIpcSubscriber<object>($"{Name}.Nav.PathfindCancelAll");
 
-                _queryMeshNearestPoint = PluginInterface.GetIpcSubscriber<Vector3, float, float, Vector3?>($"{Name}.Query.Mesh.NearestPoint");
-                _queryMeshPointOnFloor = PluginInterface.GetIpcSubscriber<Vector3, float, Vector3?>($"{Name}.Query.Mesh.PointOnFloor");
+            _queryMeshNearestPoint = PluginInterface.GetIpcSubscriber<Vector3, float, float, Vector3?>($"{Name}.Query.Mesh.NearestPoint");
+            _queryMeshPointOnFloor = PluginInterface.GetIpcSubscriber<Vector3, bool, float, Vector3?>($"{Name}.Query.Mesh.PointOnFloor");
 
-                _pathMoveTo = PluginInterface.GetIpcSubscriber<List<Vector3>, bool, object>($"{Name}.Path.MoveTo");
-                _pathStop = PluginInterface.GetIpcSubscriber<object>($"{Name}.Path.Stop");
-                _pathIsRunning = PluginInterface.GetIpcSubscriber<bool>($"{Name}.Path.IsRunning");
-                _pathNumWaypoints = PluginInterface.GetIpcSubscriber<int>($"{Name}.Path.NumWaypoints");
-                _pathGetMovementAllowed = PluginInterface.GetIpcSubscriber<bool>($"{Name}.Path.GetMovementAllowed");
-                _pathSetMovementAllowed = PluginInterface.GetIpcSubscriber<bool, object>($"{Name}.Path.SetMovementAllowed");
-                _pathGetAlignCamera = PluginInterface.GetIpcSubscriber<bool>($"{Name}.Path.GetAlignCamera");
-                _pathSetAlignCamera = PluginInterface.GetIpcSubscriber<bool, object>($"{Name}.Path.SetAlignCamera");
-                _pathGetTolerance = PluginInterface.GetIpcSubscriber<float>($"{Name}.Path.GetTolerance");
-                _pathSetTolerance = PluginInterface.GetIpcSubscriber<float, object>($"{Name}.Path.SetTolerance");
+            _pathMoveTo = PluginInterface.GetIpcSubscriber<List<Vector3>, bool, object>($"{Name}.Path.MoveTo");
+            _pathStop = PluginInterface.GetIpcSubscriber<object>($"{Name}.Path.Stop");
+            _pathIsRunning = PluginInterface.GetIpcSubscriber<bool>($"{Name}.Path.IsRunning");
+            _pathNumWaypoints = PluginInterface.GetIpcSubscriber<int>($"{Name}.Path.NumWaypoints");
+            _pathGetMovementAllowed = PluginInterface.GetIpcSubscriber<bool>($"{Name}.Path.GetMovementAllowed");
+            _pathSetMovementAllowed = PluginInterface.GetIpcSubscriber<bool, object>($"{Name}.Path.SetMovementAllowed");
+            _pathGetAlignCamera = PluginInterface.GetIpcSubscriber<bool>($"{Name}.Path.GetAlignCamera");
+            _pathSetAlignCamera = PluginInterface.GetIpcSubscriber<bool, object>($"{Name}.Path.SetAlignCamera");
+            _pathGetTolerance = PluginInterface.GetIpcSubscriber<float>($"{Name}.Path.GetTolerance");
+            _pathSetTolerance = PluginInterface.GetIpcSubscriber<float, object>($"{Name}.Path.SetTolerance");
 
-                _pathfindAndMoveTo = PluginInterface.GetIpcSubscriber<Vector3, bool, bool>($"{Name}.SimpleMove.PathfindAndMoveTo");
-                _pathfindInProgress = PluginInterface.GetIpcSubscriber<bool>($"{Name}.SimpleMove.PathfindInProgress");
-            }
-            catch (Exception ex) { ex.Log(); }
+            _pathfindAndMoveTo = PluginInterface.GetIpcSubscriber<Vector3, bool, bool>($"{Name}.SimpleMove.PathfindAndMoveTo");
+            _pathfindInProgress = PluginInterface.GetIpcSubscriber<bool>($"{Name}.SimpleMove.PathfindInProgress");
         }
+        catch (Exception ex) { ex.Log(); }
     }
 
     internal static T? Execute<T>(Func<T> func)
@@ -130,9 +130,10 @@ public static class NavmeshIPC
     internal static Task<List<Vector3>>? NavPathfind(Vector3 from, Vector3 to, bool fly = false) => Execute(() => _navPathfind!.InvokeFunc(from, to, fly));
     internal static bool NavIsAutoLoad() => Execute(() => _navIsAutoLoad!.InvokeFunc());
     internal static void NavSetAutoLoad(bool value) => Execute(_navSetAutoLoad!.InvokeAction, value);
+    internal static void PathfindCancelAll() => Execute(_navPathfindCancelAll!.InvokeAction);
 
     internal static Vector3? QueryMeshNearestPoint(Vector3 pos, float halfExtentXZ, float halfExtentY) => Execute(() => _queryMeshNearestPoint!.InvokeFunc(pos, halfExtentXZ, halfExtentY));
-    internal static Vector3? QueryMeshPointOnFloor(Vector3 pos, float halfExtentXZ) => Execute(() => _queryMeshPointOnFloor!.InvokeFunc(pos, halfExtentXZ));
+    internal static Vector3? QueryMeshPointOnFloor(Vector3 pos, bool allowUnlandable, float halfExtentXZ) => Execute(() => _queryMeshPointOnFloor!.InvokeFunc(pos, allowUnlandable, halfExtentXZ));
 
     internal static void PathMoveTo(List<Vector3> waypoints, bool fly) => Execute(_pathMoveTo!.InvokeAction, waypoints, fly);
     internal static void PathStop() => Execute(_pathStop!.InvokeAction);

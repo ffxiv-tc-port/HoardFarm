@@ -2,19 +2,8 @@
 
 namespace HoardFarm.Tasks.Base;
 
+// 時限由排進佇列的人決定（TaskManagerUtil 的 timeLimitMs，預設 10 秒），任務本身不帶時限。
 public abstract class BaseTask
 {
-    public int Timeout { get; private set; }
-
-    protected BaseTask(int timeout) 
-    {
-        Timeout = timeout * 1000;
-    }
-    
-    protected BaseTask()
-    {
-        Timeout = 10 * 1000;
-    }
-
     public abstract bool? Run();
 }

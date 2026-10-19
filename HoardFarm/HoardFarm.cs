@@ -5,10 +5,10 @@ using AutoRetainerAPI;
 using Dalamud.Game;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
+using Dalamud.Plugin.Ipc;
 using Dalamud.Plugin.Services;
 using ECommons;
 using ECommons.Automation.LegacyTaskManager;
-using ECommons.Reflection;
 using HoardFarm.Data;
 using HoardFarm.IPC;
 using HoardFarm.Model;
@@ -30,24 +30,28 @@ public sealed class HoardFarm : IDalamudPlugin
     private readonly RetainerService retainerService;
     public readonly WindowSystem WindowSystem = new("HoardFarm");
 
+    // 急停端點：Action<string>，參數是呼叫端署名（寫進 log 與狀態列）。刻意只給停止、不給開始。
+    private const string StopAllIpcName = "HoardFarm.StopAll";
+    private readonly ICallGateProvider<string, object>? stopAllProvider;
+
+    // 狀態端點：Func<bool>，自動流程在跑＝true（含進出副本之間）。任何執行緒都可能呼叫，只讀 volatile 欄位。
+    private const string IsRunningIpcName = "HoardFarm.IsRunning";
+    private readonly ICallGateProvider<bool>? isRunningProvider;
+
     public HoardFarm(IDalamudPluginInterface? pluginInterface)
     {
         pluginInterface?.Create<PluginService>();
         P = this;
 
         ECommonsMain.Init(pluginInterface, this, Module.DalamudReflector);
-        DalamudReflector.RegisterOnInstalledPluginsChangedEvents(() =>
-        {
-            if (PluginInstalled(NavmeshIPC.Name))
-                NavmeshIPC.Init();
-        });
+
+        // 先於第一個訂閱建立（建構子不在框架執行緒，訂閱一掛上處理器就可能讀它）；刻意維持「逾時只丟掉那一步」：叫不出坐騎、進場時沒跳團滅確認框都靠它繼續往下走。
+        PluginService.TaskManager = new TaskManager();
+
+        NavmeshIPC.Init();
 
         Config = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-        if (Config.UniqueId == null)
-        {
-            Config.UniqueId = Guid.NewGuid().ToString();
-            Config.Save();
-        }
+        ApplyLanguage();
 
         mainWindow = new MainWindow();
         configWindow = new ConfigWindow();
@@ -74,36 +78,28 @@ public sealed class HoardFarm : IDalamudPlugin
         PluginInterface.UiBuilder.OpenConfigUi += ShowConfigWindow;
         Framework.Update += FrameworkUpdate;
 
-        PluginService.TaskManager = new TaskManager();
-        
-        if (Config.Language == "")
-        {
-            CultureInfo.DefaultThreadCurrentUICulture = ClientState.ClientLanguage switch
-            {
-                ClientLanguage.French => CultureInfo.GetCultureInfo("fr"),
-                ClientLanguage.German => CultureInfo.GetCultureInfo("de"),
-                ClientLanguage.Japanese => CultureInfo.GetCultureInfo("ja"),
-                _ => CultureInfo.GetCultureInfo("en")
-            };
-        }
-        else
-        {
-            CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo(Config.Language);
-        }
+        stopAllProvider = PluginInterface.GetIpcProvider<string, object>(StopAllIpcName);
+        stopAllProvider.RegisterAction(source => HoardService.RequestStopAll(source));
 
+        var service = hoardFarmService;
+        isRunningProvider = PluginInterface.GetIpcProvider<bool>(IsRunningIpcName);
+        isRunningProvider.RegisterFunc(() => service.IsRunning);
 
         EzCmd.Add("/hoardfarm", (_, args) => OnCommand(args), Strings.HoardFarm_CommandHelp);
     }
 
     public void Dispose()
     {
+        stopAllProvider?.UnregisterAction();
+        isRunningProvider?.UnregisterFunc();
         WindowSystem.RemoveAllWindows();
-        hoardFarmService.Dispose();
+        hoardFarmService?.Dispose();
 
-        autoRetainerApi.Dispose();
-        retainerService.Dispose();
+        autoRetainerApi?.Dispose();
+        retainerService?.Dispose();
 
         Framework.Update -= FrameworkUpdate;
+        YesAlreadyManager.Release();
         ECommonsMain.Dispose();
     }
 
@@ -136,6 +132,10 @@ public sealed class HoardFarm : IDalamudPlugin
             case "disable":
                 if (HoardService.HoardMode) HoardService.FinishRun = true;
                 return;
+            case "s":
+            case "stop":
+                HoardService.StopAll(Strings.HoardFarm_StopReason_Command);
+                return;
             case "t":
             case "toggle":
                 HoardService.HoardMode = !HoardService.HoardMode;
@@ -144,6 +144,22 @@ public sealed class HoardFarm : IDalamudPlugin
                 ShowMainWindow();
                 break;
         }
+    }
+
+    // 只設本插件的資源文化，不動整個行程的 DefaultThreadCurrentUICulture（那會改到別的插件）。
+    // 台服客戶端回報 ClientLanguage 7；4／5 一併歸繁中（艦隊慣例，用數值不用列舉名）。
+    public static void ApplyLanguage()
+    {
+        Strings.Culture = Config.Language != ""
+            ? CultureInfo.GetCultureInfo(Config.Language)
+            : ClientState.ClientLanguage switch
+            {
+                ClientLanguage.French => CultureInfo.GetCultureInfo("fr"),
+                ClientLanguage.German => CultureInfo.GetCultureInfo("de"),
+                ClientLanguage.Japanese => CultureInfo.GetCultureInfo("ja"),
+                (ClientLanguage)4 or (ClientLanguage)5 or (ClientLanguage)7 => CultureInfo.GetCultureInfo("zh-Hant"),
+                _ => CultureInfo.GetCultureInfo("en")
+            };
     }
 
     public void ShowConfigWindow()

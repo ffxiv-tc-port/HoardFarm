@@ -33,6 +33,9 @@ public class LeaveDutyTask : IBaseTaskGroup
     
     private static unsafe bool? LeaveDuty()
     {
+        // 排進佇列到真的執行之間可能已經離開（或換到別的任務）；不在天之御柱就不送。
+        if (!InHoHDuty) return true;
+
         var agent = AgentModule.Instance()->GetAgentByInternalId(AgentId.ContentsFinderMenu);
         if (agent == null)
         {

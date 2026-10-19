@@ -7,8 +7,8 @@ using Dalamud.Memory;
 using Dalamud.Utility;
 using ECommons.DalamudServices;
 using ECommons.GameHelpers;
-using ECommons.Reflection;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using HoardFarm.Model;
@@ -23,8 +23,11 @@ public static class Utils
     public static bool Concealment =>
         (Player.Status.FirstOrDefault(s => s.StatusId == VanishStatusId)?.RemainingTime ?? 0) > 0;
 
-    public static bool InHoH => Player.Territory.Value.RowId == HoHMapId11 || Player.Territory.Value.RowId == HoHMapId21;
-    public static bool InRubySea => Player.Territory.Value.RowId == RubySeaMapId;
+    public static bool InHoH => Player.Territory == HoHMapId11 || Player.Territory == HoHMapId21;
+    public static bool InRubySea => Player.Territory == RubySeaMapId;
+
+    // 含 1～10 層：「退出任務」只准在天之御柱裡送。
+    public static bool InHoHDuty => InHoH || Player.Territory == HoHMapId1;
 
     public static unsafe bool IsMoving() => AgentMap.Instance()->IsPlayerMoving;
 
@@ -33,9 +36,27 @@ public static class Utils
         return new Vector2(v.X - v2.X, v.Z - v2.Z).Length();
     }
 
+    private static readonly Dictionary<string, (bool Loaded, long At)> PluginLoadedCache = new();
+
+    // 只在主執行緒呼叫（框架更新與繪製）；每個名字一秒內重用上次的答案，避免每幀列舉插件清單。
     public static bool PluginInstalled(string name)
     {
-        return DalamudReflector.TryGetDalamudPlugin(name, out _, false, true);
+        var now = Environment.TickCount64;
+        if (PluginLoadedCache.TryGetValue(name, out var cached) && now - cached.At < 1000)
+            return cached.Loaded;
+
+        var loaded = false;
+        foreach (var plugin in PluginInterface.InstalledPlugins)
+        {
+            if (plugin.IsLoaded && plugin.InternalName == name)
+            {
+                loaded = true;
+                break;
+            }
+        }
+
+        PluginLoadedCache[name] = (loaded, now);
+        return loaded;
     }
 
     public static unsafe bool NotBusy()
@@ -72,8 +93,9 @@ public static class Utils
             {
                 var componentNode = node->GetAsAtkComponentNode();
                 var component = componentNode->Component;
-                var uldManager = component->UldManager;
-                childNode = uldManager.NodeList[0];
+                if (component == null || component->UldManager.NodeListCount == 0 || component->UldManager.NodeList == null)
+                    return null;
+                childNode = component->UldManager.NodeList[0];
                 return childNode == null ? null : GetNodeByIDChain(childNode, newList.ToArray());
             }
 
@@ -85,30 +107,29 @@ public static class Utils
         return sibNode != null ? GetNodeByIDChain(sibNode, ids) : null;
     }
 
+    private static readonly Dictionary<uint, string> YesnoPromptCache = new();
+
+    // 空白（含換行與全形空白）不算：畫面在 NewLine 巨集處是字面 LF，表字串剝成空字串；其餘逐字比，不做子字串比對。
+    public static string NormalizeGameText(string s) =>
+        string.Concat(s.Where(c => !char.IsWhiteSpace(c)));
+
+    /// <summary>目前開著、而且提示文字正好是 Addon 表第 rowId 列的確認框；不是就回 null。</summary>
     public static unsafe AtkUnitBase* FindSelectYesNo(uint rowId)
     {
-        var s = Svc.Data.GetExcelSheet<Addon>().GetRow(rowId).Text
-                   .ToDalamudString().GetText();
-        for (var i = 1; i < 100; i++)
-            try
-            {
-                if (TryGetAddonByName<AtkUnitBase>("SelectYesno", out var addon) && IsAddonReady(addon))
-                {
-                    var textNode = addon->UldManager.NodeList[15]->GetAsAtkTextNode();
-                    var text = MemoryHelper.ReadSeString(&textNode->NodeText).GetText().Replace(" ", "");
-                    if (text.EqualsAny(s) || text.ContainsAny(s)) return addon;
-                    {
-                        return addon;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                PluginLog.Debug(e.ToString());
-                return null;
-            }
+        if (!YesnoPromptCache.TryGetValue(rowId, out var expected))
+        {
+            var row = Svc.Data.GetExcelSheet<Addon>().GetRowOrDefault(rowId);
+            expected = row == null ? "" : NormalizeGameText(row.Value.Text.ToDalamudString().GetText());
+            YesnoPromptCache[rowId] = expected;
+        }
 
-        return null;
+        if (expected.Length == 0) return null;
+        if (!TryGetAddonByName<AddonSelectYesno>("SelectYesno", out var addon) || !IsAddonReady(&addon->AtkUnitBase))
+            return null;
+        if (addon->PromptText == null) return null;
+
+        var actual = NormalizeGameText(MemoryHelper.ReadSeString(&addon->PromptText->NodeText).GetText());
+        return actual == expected ? &addon->AtkUnitBase : null;
     }
 
 
@@ -130,7 +151,9 @@ public static class Utils
                 Pomander.Safety => SafetyChain,
                 _ => []
             };
-            return chain.Length != 0 && GetNodeByIDChain(addon->GetRootNode(), chain)->IsVisible();
+            if (chain.Length == 0) return false;
+            var node = GetNodeByIDChain(addon->GetRootNode(), chain);
+            return node != null && node->IsVisible();
         }
 
         return false;
@@ -139,7 +162,10 @@ public static class Utils
     public static unsafe bool CanUseMagicite()
     {
         if (TryGetAddonByName<AtkUnitBase>("DeepDungeonStatus", out var addon) && IsAddonReady(addon))
-            return GetNodeByIDChain(addon->GetRootNode(), MagiciteChain)->IsVisible();
+        {
+            var node = GetNodeByIDChain(addon->GetRootNode(), MagiciteChain);
+            return node != null && node->IsVisible();
+        }
 
         return false;
     }

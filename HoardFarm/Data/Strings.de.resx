@@ -167,15 +167,6 @@
     <data name="HoardFarm_Status_EnteringHoH" xml:space="preserve">
         <value>Himmelssäule betreten</value>
     </data>
-    <data name="ConfigWindow_WaitBetween" xml:space="preserve">
-        <value>Warte zwischen:</value>
-    </data>
-    <data name="ConfigWindow_Seconds" xml:space="preserve">
-        <value>%d Sekunden</value>
-    </data>
-    <data name="ConfigWindow_SlowMode" xml:space="preserve">
-        <value>Langsamer Modus</value>
-    </data>
     <data name="ConfigWindow_SupportKofi" xml:space="preserve">
         <value>Unterstützen auf Ko-fi</value>
     </data>
@@ -184,12 +175,6 @@
     </data>
     <data name="DeepDungeonMenuOverlay_OpenHoardfarm" xml:space="preserve">
         <value>HoardFarm öffnen</value>
-    </data>
-    <data name="ConfigWindow_And" xml:space="preserve">
-        <value>und</value>
-    </data>
-    <data name="ConfigWindow_DisableStatisticGathering" xml:space="preserve">
-        <value>Statistik sammeln deaktivieren</value>
     </data>
     <data name="MainWindow_FarmMode" xml:space="preserve">
         <value>Farm-Modus:</value>
@@ -200,21 +185,11 @@
     <data name="MainWindow_EnableHoardFarmMode" xml:space="preserve">
         <value>HoardFarm aktivieren</value>
     </data>
-    <data name="ConfigWindow_DisableStatisticGathering_Help" xml:space="preserve">
-        <value>Deaktiviert das globale Sammeln von Laufzeiten und gefundenen Schätzen.
-Wird ausschließlich verwendet, um eine genaue globale Statistik zu erstellen.
-Sendet nur die Laufzeit, wenn ein Schatz gefunden wurde, sowie die Reisezeit zum Hoard.
-Charakterdaten, Zeitstempel oder andere identifizierende Informationen werden NIEMALS gesendet!</value>
-    </data>
     <data name="ConfigWindow_GreetingText" xml:space="preserve">
         <value>Hier gibt es eigentlich nicht viel zu konfigurieren.</value>
     </data>
     <data name="ConfigWindow_OpenHoardfarmOverlay" xml:space="preserve">
         <value>Zeige "HoardFarm öffnen"-Overlay</value>
-    </data>
-    <data name="ConfigWindow_SlowMode_Help" xml:space="preserve">
-        <value>Der Langsame-Modus wartet ein par Sekunden, bevor er erneut den Inhalt anmeldet.
-Nicht wirklich notwendig, aber manche fühlen sich damit wohler.</value>
     </data>
     <data name="HoardFarm_CommandHelp" xml:space="preserve">
         <value>Öffnet das HoardFarm-Fenster.
