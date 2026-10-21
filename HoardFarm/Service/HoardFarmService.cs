@@ -439,7 +439,9 @@ public class HoardFarmService : IDisposable
                 }
             }
 
-            if (Svc.Condition[ConditionFlag.Unconscious]) LeaveDuty(Strings.HoardFarm_Status_PlayerDied);
+            // 同逾時分支：倒地期間每秒都會走到這裡，佇列裡已有退出就不再疊一組。
+            if (Svc.Condition[ConditionFlag.Unconscious] && !(leaveDecided && TaskManager.IsBusy))
+                LeaveDuty(Strings.HoardFarm_Status_PlayerDied);
         }
     }
 
