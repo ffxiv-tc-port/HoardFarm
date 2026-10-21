@@ -405,9 +405,10 @@ public class HoardFarmService : IDisposable
             {
                 if (!Concealment)
                 {
-                    if (!magiciteCoverUsed && CanUsePomander(Pomander.Concealment))
+                    // 魔石掩護過的這一層不補隱形；咒印解除仍只在「沒有隱形魔陶器」時才用。
+                    if (CanUsePomander(Pomander.Concealment))
                     {
-                        if (EzThrottler.Check("Concealment"))
+                        if (!magiciteCoverUsed && EzThrottler.Check("Concealment"))
                         {
                             EzThrottler.Throttle("Concealment", 2000);
                             new UsePomanderTask(Pomander.Concealment, false).Run();
