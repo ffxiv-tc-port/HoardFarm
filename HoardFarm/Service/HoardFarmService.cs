@@ -29,6 +29,8 @@ public class HoardFarmService : IDisposable
     private readonly string senseHoardMessage;
     private readonly List<uint> visitedObjectIds = [];
     public bool FinishRun;
+    // 使用者下的「這一趟跑完再停」；進場的 Reset 不清它，只在開始／停止時清。
+    private bool stopAfterRunRequested;
     private bool hoardAvailable;
 
     private bool hoardFound;
@@ -139,6 +141,7 @@ public class HoardFarmService : IDisposable
     {
         var wasRunning = running;
         running = false;
+        stopAfterRunRequested = false;
         TaskManager.Abort();
         HoardModeStatus = "";
         ChatGui.ChatMessage -= OnChatMessage;
@@ -164,6 +167,7 @@ public class HoardFarmService : IDisposable
     private void EnableFarm()
     {
         Reset();
+        stopAfterRunRequested = false;
         SessionTime = 0;
         SessionRuns = 0;
         SessionFoundHoards = 0;
@@ -173,6 +177,12 @@ public class HoardFarmService : IDisposable
         HoardModeError = "";
         ChatGui.ChatMessage -= OnChatMessage;
         ChatGui.ChatMessage += OnChatMessage;
+    }
+
+    /// <summary>這一趟跑完（回到紅玉海）再停；沒在跑時不做事。只在 framework 執行緒呼叫。</summary>
+    public void RequestFinishRun()
+    {
+        if (hoardModeActive) stopAfterRunRequested = true;
     }
 
     private void Reset()
@@ -295,7 +305,7 @@ public class HoardFarmService : IDisposable
 
             if (InRubySea && NotBusy() && KyuseiInteractable())
             {
-                if (FinishRun)
+                if (FinishRun || stopAfterRunRequested)
                 {
                     HoardMode = false;
                     HoardModeStatus = Strings.HoardFarm_Status_Finished;
