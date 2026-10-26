@@ -78,3 +78,4 @@ jobs:
             HoardFarm.zip
             HoardFarm/bin/x64/Release/HoardFarm/HoardFarm.json
           generate_release_notes: true
+# workflow re-registration trigger 2026-10-26T17:59:52Z
