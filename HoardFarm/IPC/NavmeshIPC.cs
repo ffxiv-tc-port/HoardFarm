@@ -143,6 +143,27 @@ public static class NavmeshIPC
     internal static void PathSetMovementAllowed(bool value) => Execute(_pathSetMovementAllowed!.InvokeAction, value);
     internal static bool PathGetAlignCamera() => Execute(() => _pathGetAlignCamera!.InvokeFunc());
     internal static void PathSetAlignCamera(bool value) => Execute(_pathSetAlignCamera!.InvokeAction, value);
+    // 只記「關→開是我們切的」；還原時已被別人關掉就不動。只在框架執行緒呼叫。
+    private static bool alignCameraEnabledByUs;
+
+    internal static void EnsureAlignCamera()
+    {
+        if (!PluginInstalled(Name) || PathGetAlignCamera()) return;
+        PathSetAlignCamera(true);
+        if (!alignCameraEnabledByUs)
+            PluginLog.Information("[HoardFarm] vnavmesh 對齊鏡頭原本是關的，自動流程期間打開，停止時關回去");
+        alignCameraEnabledByUs = true;
+    }
+
+    internal static void RestoreAlignCamera()
+    {
+        if (!alignCameraEnabledByUs) return;
+        alignCameraEnabledByUs = false;
+        if (!PluginInstalled(Name) || !PathGetAlignCamera()) return;
+        PathSetAlignCamera(false);
+        PluginLog.Information("[HoardFarm] 已把 vnavmesh 對齊鏡頭關回開始前的狀態");
+    }
+
     internal static float PathGetTolerance() => Execute(() => _pathGetTolerance!.InvokeFunc());
     internal static void PathSetTolerance(float tolerance) => Execute(_pathSetTolerance!.InvokeAction, tolerance);
 

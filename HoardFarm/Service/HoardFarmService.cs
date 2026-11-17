@@ -154,6 +154,9 @@ public class HoardFarmService : IDisposable
             NavmeshIPC.PathStop();
         }
 
+        // 停止、急停、跑完、卸載都經過這裡；沒切過就不碰。
+        NavmeshIPC.RestoreAlignCamera();
+
         if (RetainerScv.Running) RetainerScv.FinishProcess();
         EnableIfNeeded();
     }

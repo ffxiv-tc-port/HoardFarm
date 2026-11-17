@@ -35,7 +35,7 @@ public class PathfindTask(Vector3 targetPosition, bool sprint = false, float tol
         if (NavmeshIPC.PathfindInProgress() || NavmeshIPC.PathIsRunning() || IsMoving()) return false;
 
         NavmeshIPC.PathfindAndMoveTo(targetPosition, false);
-        NavmeshIPC.PathSetAlignCamera(true);
+        NavmeshIPC.EnsureAlignCamera();
         
         return false;
     }
