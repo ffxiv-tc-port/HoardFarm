@@ -15,12 +15,6 @@ namespace HoardFarm.Tasks.TaskGroups;
 
 public class LeaveDutyTask : IBaseTaskGroup
 {
-    [StructLayout(LayoutKind.Explicit, Size = 64)]
-    public struct EventObject {
-        [FieldOffset(0)] public ulong Unknown0;
-        [FieldOffset(8)] public ulong Unknown8;
-    }
-    
     public ArrayList GetTaskList()
     {
         return
@@ -42,20 +36,18 @@ public class LeaveDutyTask : IBaseTaskGroup
             return false;
         }
         
-        var eventObject = (AtkValue*)Marshal.AllocHGlobal(sizeof(AtkValue));
         var atkValues = CreateEventParams();
-        if (atkValues != null)
-        {
-            try {
-                agent->ReceiveEvent(eventObject, atkValues, 1, 0);
-                return true;
-            } finally {
-                Marshal.FreeHGlobal(new IntPtr(atkValues));
-                Marshal.FreeHGlobal(new IntPtr(eventObject));
-            }
-        }
+        if (atkValues == null) return false;
 
-        return false;
+        AtkValue* eventObject = null;
+        try {
+            eventObject = (AtkValue*)Marshal.AllocHGlobal(sizeof(AtkValue));
+            agent->ReceiveEvent(eventObject, atkValues, 1, 0);
+            return true;
+        } finally {
+            Marshal.FreeHGlobal(new IntPtr(atkValues));
+            if (eventObject != null) Marshal.FreeHGlobal(new IntPtr(eventObject));
+        }
     }
     
     public static unsafe AtkValue* CreateEventParams() {
