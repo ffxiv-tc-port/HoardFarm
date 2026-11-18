@@ -373,7 +373,7 @@ public class HoardFarmService : IDisposable
                         }
                         else
                         {
-                            if (Config.HoardFarmMode == 1)
+                            if (Config.HoardFarmMode == Configuration.HoardFarmModeSafety)
                             {
                                 LeaveDuty(Strings.HoardFarm_Status_Leaving, Config.LeaveDelayAfterIntuition, "安全模式：看不到寶藏位置、不搜尋");
                                 return;
@@ -502,7 +502,7 @@ public class HoardFarmService : IDisposable
     {
         if (Config.DoRetainers
             && RetainerApi.Ready
-            && RetainerService.CheckRetainersDone(Config.RetainerMode == 1)
+            && RetainerService.CheckRetainersDone(Config.RetainerMode == Configuration.RetainerModeAllDone)
             && RetainerScv.CanRunRetainer())
         {
             RetainerScv.StartProcess();
@@ -590,9 +590,9 @@ public class HoardFarmService : IDisposable
     {
         switch (Config.StopAfterMode)
         {
-            case 0 when SessionRuns >= Config.StopAfter:
-            case 1 when SessionFoundHoards >= Config.StopAfter:
-            case 2 when SessionTime >= Config.StopAfter * 60:
+            case Configuration.StopAfterRuns when SessionRuns >= Config.StopAfter:
+            case Configuration.StopAfterHoards when SessionFoundHoards >= Config.StopAfter:
+            case Configuration.StopAfterMinutes when SessionTime >= Config.StopAfter * 60:
                 return true;
             default:
                 return false;

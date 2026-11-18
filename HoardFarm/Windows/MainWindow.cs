@@ -145,7 +145,7 @@ public class MainWindow : Window
         ImGui.BeginGroup();
         ImGui.Text(Strings.MainWindow_FarmMode);
         ImGui.Indent(15);
-        if (ImGui.RadioButton(Strings.MainWindow_FarmMode_Efficiency, ref conf.HoardFarmMode, 0))
+        if (ImGui.RadioButton(Strings.MainWindow_FarmMode_Efficiency, ref conf.HoardFarmMode, Configuration.HoardFarmModeEfficiency))
             Config.Save();
 
         ImGui.SameLine();
@@ -154,7 +154,7 @@ public class MainWindow : Window
         ImGui.PopFont();
         if (ImGui.IsItemHovered()) ImGui.SetTooltip(Strings.MainWindow_FarmMode_Efficiency_Help);
 
-        if (ImGui.RadioButton(Strings.MainWindow_FarmMode_Safety, ref conf.HoardFarmMode, 1))
+        if (ImGui.RadioButton(Strings.MainWindow_FarmMode_Safety, ref conf.HoardFarmMode, Configuration.HoardFarmModeSafety))
             Config.Save();
 
 
