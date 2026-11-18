@@ -11,12 +11,6 @@ public static class DataIDs
     public const uint OnokoroAetherytId = 106;
     public const uint KyuseiDataId = 1025846;
     public static readonly Vector3 KyuseiLocation = new(-2.02948f, 3.0059814f, -611.3528f);
-    
-    //////////// Limsa IDs ////////////
-    public const ushort LimsaMapId = 129;
-    public const uint LimsaAetherytId = 8;
-    public const uint RetainerBellDataId = 2000401;
-    public static readonly Vector3 RetainerBellLocation = new(-124.1676f, 18f, 19.9041f);
 
     public const ushort HoHMapId1 = 770;
     public const ushort HoHMapId11 = 771;

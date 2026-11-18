@@ -157,7 +157,6 @@ public class HoardFarmService : IDisposable
         // 停止、急停、跑完、卸載都經過這裡；沒切過就不碰。
         NavmeshIPC.RestoreAlignCamera();
 
-        if (RetainerScv.Running) RetainerScv.FinishProcess();
         EnableIfNeeded();
     }
 
@@ -258,13 +257,6 @@ public class HoardFarmService : IDisposable
 
         lastTick = DateTime.Now;
 
-        // Retainer do not increase runtime
-        if (RetainerScv.Running)
-        {
-            HoardModeStatus = Strings.HoardFarm_Status_RetainerRunning;
-            return;
-        }
-
         SessionTime++;
         Config.OverallTime++;
 
@@ -315,9 +307,9 @@ public class HoardFarmService : IDisposable
                     return;
                 }
 
-                if (CheckRetainer())
+                if (CheckRetainersReturned())
                 {
-                    // Do retainers first
+                    StopForRetainers();
                     return;
                 }
 
@@ -498,18 +490,22 @@ public class HoardFarmService : IDisposable
                                    new MapObject(gameObject.EntityId, gameObject.BaseId, gameObject.Position));
     }
 
-    private bool CheckRetainer()
+    private bool CheckRetainersReturned()
     {
-        if (Config.DoRetainers
-            && RetainerApi.Ready
-            && RetainerService.CheckRetainersDone(Config.RetainerMode == Configuration.RetainerModeAllDone)
-            && RetainerScv.CanRunRetainer())
-        {
-            RetainerScv.StartProcess();
-            return true;
-        }
+        return Config.DoRetainers
+               && RetainerApi.Ready
+               && RetainerService.CheckRetainersDone(Config.RetainerMode == Configuration.RetainerModeAllDone)
+               && RetainerScv.CanRunRetainer();
+    }
 
-        return false;
+    // 停在紅玉海、還沒進場的那一刻；走一般停止流程，之後要使用者自己再按開始。
+    // 刻意不替使用者開 AutoRetainer、不寫它的設定、不前往傳喚鈴：那是事件驅動的接手鏈（市場自動化紅線灰區）。
+    private void StopForRetainers()
+    {
+        PluginLog.Information($"[HoardFarm] 僱員已回來（{(Config.RetainerMode == Configuration.RetainerModeAllDone ? "全部" : "任一")}），停在紅玉海並提示使用者");
+        HoardMode = false;
+        HoardModeStatus = Strings.HoardFarm_Status_RetainersReturned;
+        ChatGui.Print($"[HoardFarm] {Strings.HoardFarm_RetainersReturnedNotice}");
     }
 
     private bool CheckMinimalSetup()

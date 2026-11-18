@@ -138,13 +138,13 @@
         <value>無法執行：</value>
     </data>
     <data name="MainWindow_DoRetainers" xml:space="preserve">
-        <value>處理僱員：</value>
+        <value>僱員回來時停下：</value>
     </data>
-    <data name="MainWindow_DoRetainers_Port" xml:space="preserve">
-        <value>兩趟之間若僱員探險已完成，會傳送到利姆薩・羅敏薩下層甲板，交給 AutoRetainer 處理。</value>
+    <data name="MainWindow_DoRetainers_StopNotice" xml:space="preserve">
+        <value>兩趟之間若僱員探險已完成，會在紅玉海停下並在聊天視窗提示。不會替你開啟 AutoRetainer，也不會改動它的設定。</value>
     </data>
     <data name="MainWindow_DoRetainers_WrongWorld" xml:space="preserve">
-        <value>請確認目前在自己的原始世界，而且背包空位超過 4 格。</value>
+        <value>目前不在原始世界，或背包空位不到 5 格：這時僱員回來也不會停下。</value>
     </data>
     <data name="MainWindow_DoRetainers_AutoretainerNeeded" xml:space="preserve">
         <value>此功能需要安裝並設定好 AutoRetainer。</value>
@@ -179,8 +179,11 @@
     <data name="HoardFarm_Status_SearchingObject" xml:space="preserve">
         <value>搜尋 {0}</value>
     </data>
-    <data name="HoardFarm_Status_RetainerRunning" xml:space="preserve">
-        <value>僱員處理中</value>
+    <data name="HoardFarm_Status_RetainersReturned" xml:space="preserve">
+        <value>僱員已回來，已停止</value>
+    </data>
+    <data name="HoardFarm_RetainersReturnedNotice" xml:space="preserve">
+        <value>僱員已回來，HoardFarm 已停止。請自行處理僱員（可手動開啟 AutoRetainer）後再重新開始。不想被打斷可關閉「僱員回來時停下」。</value>
     </data>
     <data name="HoardFarm_Status_WaitingNavmesh" xml:space="preserve">
         <value>等待 vnavmesh</value>

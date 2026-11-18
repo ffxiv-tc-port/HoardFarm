@@ -320,11 +320,11 @@ namespace HoardFarm.Data {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Retainer Running.
+        ///   Looks up a localized string similar to Retainers returned (stopped).
         /// </summary>
-        internal static string HoardFarm_Status_RetainerRunning {
+        internal static string HoardFarm_Status_RetainersReturned {
             get {
-                return ResourceManager.GetString("HoardFarm_Status_RetainerRunning", resourceCulture);
+                return ResourceManager.GetString("HoardFarm_Status_RetainersReturned", resourceCulture);
             }
         }
         
@@ -446,7 +446,7 @@ namespace HoardFarm.Data {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Do retainers:.
+        ///   Looks up a localized string similar to Stop when retainers return:.
         /// </summary>
         internal static string MainWindow_DoRetainers {
             get {
@@ -482,16 +482,16 @@ namespace HoardFarm.Data {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Ports to Limsa Lominsa and runs retainers between runs if done..
+        ///   Looks up a localized string similar to Between runs, if retainer ventures are done, HoardFarm stops in the Ruby Sea and tells you in chat. It never turns on AutoRetainer or changes its settings for you..
         /// </summary>
-        internal static string MainWindow_DoRetainers_Port {
+        internal static string MainWindow_DoRetainers_StopNotice {
             get {
-                return ResourceManager.GetString("MainWindow_DoRetainers_Port", resourceCulture);
+                return ResourceManager.GetString("MainWindow_DoRetainers_StopNotice", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Please check the current world name or Inventory slot..
+        ///   Looks up a localized string similar to Not on your home world, or fewer than 5 free inventory slots: HoardFarm will not stop even if retainers return..
         /// </summary>
         internal static string MainWindow_DoRetainers_WrongWorld {
             get {
@@ -808,6 +808,15 @@ namespace HoardFarm.Data {
         internal static string HoardFarm_StopReason_Logout {
             get {
                 return ResourceManager.GetString("HoardFarm_StopReason_Logout", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Your retainers have returned, so HoardFarm has stopped. Handle your retainers yourself (you can start AutoRetainer manually), then start again. To keep farming without stopping, turn off "Stop when retainers return"..
+        /// </summary>
+        internal static string HoardFarm_RetainersReturnedNotice {
+            get {
+                return ResourceManager.GetString("HoardFarm_RetainersReturnedNotice", resourceCulture);
             }
         }
         

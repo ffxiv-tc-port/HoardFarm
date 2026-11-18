@@ -139,13 +139,13 @@ It will take longer overall.</value>
         <value>Unable to run:</value>
     </data>
     <data name="MainWindow_DoRetainers" xml:space="preserve">
-        <value>Do retainers:</value>
+        <value>Stop when retainers return:</value>
     </data>
-    <data name="MainWindow_DoRetainers_Port" xml:space="preserve">
-        <value>Ports to Limsa Lominsa and runs retainers between runs if done.</value>
+    <data name="MainWindow_DoRetainers_StopNotice" xml:space="preserve">
+        <value>Between runs, if retainer ventures are done, HoardFarm stops in the Ruby Sea and tells you in chat. It never turns on AutoRetainer or changes its settings for you.</value>
     </data>
     <data name="MainWindow_DoRetainers_WrongWorld" xml:space="preserve">
-        <value>Please check the current world name or Inventory slot.</value>
+        <value>Not on your home world, or fewer than 5 free inventory slots: HoardFarm will not stop even if retainers return.</value>
     </data>
     <data name="MainWindow_DoRetainers_AutoretainerNeeded" xml:space="preserve">
         <value>This features requires AutoRetainer to be installed and configured.</value>
@@ -180,8 +180,11 @@ It will take longer overall.</value>
     <data name="HoardFarm_Status_SearchingObject" xml:space="preserve">
         <value>Searching {0}</value>
     </data>
-    <data name="HoardFarm_Status_RetainerRunning" xml:space="preserve">
-        <value>Retainer Running</value>
+    <data name="HoardFarm_Status_RetainersReturned" xml:space="preserve">
+        <value>Retainers returned (stopped)</value>
+    </data>
+    <data name="HoardFarm_RetainersReturnedNotice" xml:space="preserve">
+        <value>Your retainers have returned, so HoardFarm has stopped. Handle your retainers yourself (you can start AutoRetainer manually), then start again. To keep farming without stopping, turn off "Stop when retainers return".</value>
     </data>
     <data name="HoardFarm_Status_WaitingNavmesh" xml:space="preserve">
         <value>Waiting for vnavmesh</value>

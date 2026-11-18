@@ -96,7 +96,6 @@ public sealed class HoardFarm : IDalamudPlugin
         hoardFarmService?.Dispose();
 
         autoRetainerApi?.Dispose();
-        retainerService?.Dispose();
 
         Framework.Update -= FrameworkUpdate;
         YesAlreadyManager.Release();

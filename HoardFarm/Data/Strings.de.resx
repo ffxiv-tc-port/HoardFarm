@@ -110,9 +110,6 @@
     <data name="HoardFarm_Status_WaitingNavmesh" xml:space="preserve">
         <value>Warte auf vnavmesh</value>
     </data>
-    <data name="MainWindow_DoRetainers" xml:space="preserve">
-        <value>Gehilfen:</value>
-    </data>
     <data name="MainWindow_DoRetainers_AllDone" xml:space="preserve">
         <value>Wenn ALLE Gehilfen fertig sind</value>
     </data>
@@ -136,9 +133,6 @@
     </data>
     <data name="HoardFarm_Status_PlayerDied" xml:space="preserve">
         <value>Spieler tot</value>
-    </data>
-    <data name="HoardFarm_Status_RetainerRunning" xml:space="preserve">
-        <value>Gehilfen losschicken</value>
     </data>
     <data name="HoardFarm_Status_Running" xml:space="preserve">
         <value>Läuft</value>
@@ -212,9 +206,6 @@ Ebene Eins wird nicht unterstützt.</value>
     </data>
     <data name="MainWindow_DoRetainers_AutoretainerNeeded" xml:space="preserve">
         <value>Diese Funktion erfordert, dass AutoRetainer installiert und konfiguriert ist.</value>
-    </data>
-    <data name="MainWindow_DoRetainers_Port" xml:space="preserve">
-        <value>Portet nach Limsa Lominsa und führt die Gehilfen zwischen den Läufen aus, falls abgeschlossen.</value>
     </data>
     <data name="MainWindow_DoRetainers_WrongWorld" xml:space="preserve">
         <value>Bitte überprüfe den aktuellen Weltnamen oder deine Inventarslots.</value>

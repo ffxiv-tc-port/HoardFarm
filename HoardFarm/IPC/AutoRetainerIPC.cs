@@ -13,9 +13,7 @@ public class AutoRetainerIPC
 
     public AutoRetainerIPC() => EzIPC.Init(this, "AutoRetainer.PluginState");
 
-    // 刻意不掛 SafeWrapper：失敗時它回 default（IsBusy＝false＝「不忙」），會把「問不到」誤當成「可以動手」。
-    // 一律經下面的 Try* 呼叫。
-    [EzIPC] public readonly Func<bool> IsBusy;
+    // 刻意不掛 SafeWrapper：失敗時它回 default，分不出「問不到」與真值。一律經下面的 Try* 呼叫。
     [EzIPC] public readonly Func<int> GetInventoryFreeSlotCount;
 
     private bool failureLogged;
@@ -33,13 +31,7 @@ public class AutoRetainerIPC
     }
 
     /// <summary>null＝問不到（沒載入或 IPC 失敗）；不擲例外。</summary>
-    public bool? TryIsBusy() => TryInvoke(IsBusy);
-
-    /// <summary>null＝問不到（沒載入或 IPC 失敗）；不擲例外。</summary>
     public int? TryGetInventoryFreeSlotCount() => TryInvoke(GetInventoryFreeSlotCount);
-
-    /// <summary>讓下一次失敗再記一筆 log。</summary>
-    public void ResetFailureLog() => failureLogged = false;
 
     private T? TryInvoke<T>(Func<T>? func) where T : struct
     {

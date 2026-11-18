@@ -252,7 +252,7 @@ public class MainWindow : Window
                 Config.Save();
         }
 
-        var hoverText = Strings.MainWindow_DoRetainers_Port;
+        var hoverText = Strings.MainWindow_DoRetainers_StopNotice;
 
         if (autoRetainer && !canRunRetainer)
             hoverText = Strings.MainWindow_DoRetainers_WrongWorld;
