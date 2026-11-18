@@ -49,6 +49,7 @@ public class RetainerService : IDisposable
         if (CanRunRetainer())
         {
             Running = true;
+            autoRetainerIcp.ResetFailureLog();
             autoRetainerEnabled = false;
             startedAt = DateTime.Now;
             retainerSense = GetRetainerSense();
@@ -146,17 +147,7 @@ public class RetainerService : IDisposable
 
     // AutoRetainer 還在操作時不替它關僱員清單：它下一步可能正要按這個視窗，而關閉中的視窗被按＝原生崩潰。
     // 問不到（沒載入、IPC 失敗）也當作忙，寧可留著清單。
-    private bool AutoRetainerBusyOrUnknown()
-    {
-        try
-        {
-            return autoRetainerIcp.IsBusy();
-        }
-        catch (Exception)
-        {
-            return true;
-        }
-    }
+    private bool AutoRetainerBusyOrUnknown() => autoRetainerIcp.TryIsBusy() ?? true;
 
     private unsafe bool CheckRetainerListOpen()
     {
@@ -254,9 +245,14 @@ public class RetainerService : IDisposable
         return time+10 <= CSFramework.GetServerTime();
     }
 
+    // 問不到時當作還在跑：不接手、交給 5 分鐘逾時收尾（與以往擲例外時的結果相同，但不再讓同幀其他 Update 被跳過）。
     private bool AutoRetainerRunning()
     {
-        if (autoRetainerIcp.IsBusy())
+        var busy = autoRetainerIcp.TryIsBusy();
+        if (busy == null)
+            return true;
+
+        if (busy.Value)
             autoRetainerRunningThreshold = null;
         else
             autoRetainerRunningThreshold ??= DateTime.Now.AddSeconds(10);
@@ -266,9 +262,27 @@ public class RetainerService : IDisposable
 
     public bool CanRunRetainer()
     {
-        return autoRetainerIcp.GetInventoryFreeSlotCount() > 4 && 
-               Svc.Objects.LocalPlayer != null && 
+        return autoRetainerIcp.TryGetInventoryFreeSlotCount() is > 4 &&
+               Svc.Objects.LocalPlayer != null &&
                Svc.Objects.LocalPlayer.HomeWorld.RowId == Svc.Objects.LocalPlayer.CurrentWorld.RowId;
+    }
+
+    private long uiStatusAt;
+    private bool uiReady;
+    private bool uiCanRun;
+
+    /// <summary>給主視窗每幀讀；AutoRetainer 狀態每秒最多查一次（它沒載入時每次查詢都是一次例外）。框架執行緒呼叫。</summary>
+    public (bool Ready, bool CanRun) GetUiStatus()
+    {
+        var now = Environment.TickCount64;
+        if (uiStatusAt == 0 || now - uiStatusAt >= 1000)
+        {
+            uiStatusAt = now;
+            uiReady = AutoRetainerIPC.Loaded() && RetainerApi.Ready;
+            uiCanRun = uiReady && CanRunRetainer();
+        }
+
+        return (uiReady, uiCanRun);
     }
 
 }

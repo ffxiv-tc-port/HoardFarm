@@ -245,7 +245,7 @@ public class MainWindow : Window
 
     private void DrawRetainerSettings()
     {
-        var autoRetainer = RetainerApi.Ready;
+        var (autoRetainer, canRunRetainer) = RetainerScv.GetUiStatus();
         using (_ = ImRaii.Disabled(!autoRetainer))
         {
             if (ImGui.Checkbox(Strings.MainWindow_DoRetainers, ref Config.DoRetainers))
@@ -254,7 +254,7 @@ public class MainWindow : Window
 
         var hoverText = Strings.MainWindow_DoRetainers_Port;
 
-        if (autoRetainer && !RetainerScv.CanRunRetainer())
+        if (autoRetainer && !canRunRetainer)
             hoverText = Strings.MainWindow_DoRetainers_WrongWorld;
         if (!autoRetainer)
             hoverText = Strings.MainWindow_DoRetainers_AutoretainerNeeded;
