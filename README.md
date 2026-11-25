@@ -44,9 +44,15 @@
 - 僱員回來時只停下並提示：不替你開關 AutoRetainer、不改它的設定、不自動傳送去傳喚鈴
 - 介面繁體中文化（台服客戶端預設繁中，語言設定只影響本插件）
 
+## 安裝
+
+`/xlsettings` 開「Dalamud 設定」→「試驗性功能」→「第三方插件倉庫」，加入 `https://raw.githubusercontent.com/ffxiv-tc-port/DalamudPluginsTC/main/repo.json` 並啟用、儲存，再到「插件管理員」（`/xlplugins`）安裝；同一個插件只裝這裡的版本，不要同時裝上游版。
+
 ## 需要搭配的插件
 
 - 必要：vnavmesh（移動與尋路）
 - 選用：AutoRetainer（只讀它記錄的僱員探險時間，判斷僱員回來了沒）
 
 原作者：[Jukkales](https://github.com/Jukkales)
+
+授權：MIT（見 LICENSE.md）
