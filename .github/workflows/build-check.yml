@@ -1,0 +1,37 @@
+name: Build Check
+
+on:
+  push:
+    branches: [tc-7.30]
+    paths-ignore:
+      - '**.md'
+      - '**/LICENSE*'
+      - 'LICENSE*'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            9.x
+            10.x
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.tool_cache }}/dotnet
+      - name: Download Dalamud (pinned TC-compatible build)
+        shell: pwsh
+        run: |
+          $pinUrl = 'https://github.com/ffxiv-tc-port/Dalamud/releases/download/dalamud-pin-v7.30.0.1/dalamud-api13-net9.zip'
+          Invoke-WebRequest -Uri $pinUrl -OutFile dalamud-pinned.zip
+          $sha = (Get-FileHash -Algorithm SHA256 -LiteralPath dalamud-pinned.zip).Hash
+          if ($sha -ne '6E1B3EEA235A26226772566D6A825DDF33E700DCEFEB158D356FBF8FB45650AB') { throw "pinned Dalamud SHA256 mismatch: $sha" }
+          Expand-Archive -Force dalamud-pinned.zip "$env:RUNNER_TEMP\dalamud-pinned\"
+      - name: Build with dotnet
+        run: dotnet build HoardFarm.sln --configuration Release -p:DalamudLibPath="$env:RUNNER_TEMP\dalamud-pinned\"
