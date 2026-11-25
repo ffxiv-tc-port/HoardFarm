@@ -1,8 +1,8 @@
 {
     "Author": "Jukkales",
     "Name": "HoardFarm",
-    "Punchline": "在天之御柱自動反覆挖埋藏的寶藏",
-    "Description": "手動按下開始後，自動傳送到紅玉海找九星、進出天之御柱（需事先準備好第 11 層以後的存檔）、使用魔陶器「感知寶藏」「隱形」，走去挖埋藏的寶藏後退出，再重複下一趟；可設定趟數、寶藏數或時間上限，也能在兩趟之間僱員回來時停下並提示（不會替你開啟 AutoRetainer）。需要 vnavmesh。預設關閉，載入、進區、登入都不會自己開始；隨時可以取消勾選、/hoardfarm stop 或 TC Toolbox 的全艦隊急停立即停下。不會把任何資料送給原作者或第三方。",
+    "Punchline": "在天之御柱自動反覆挖埋藏的寶藏。",
+    "Description": "在天之御柱反覆進出、挖埋藏的寶藏。你手動按下開始後才會動，預設關閉。\n\n- 自動傳送到紅玉海找九星、用選好的存檔進入、使用魔陶器「感知寶藏」「隱形」，挖到寶藏後退出再重複（需事先準備好第 11 層以後的存檔）\n- 可設定趟數、寶藏數或時間上限\n- 兩趟之間僱員探險回來時可停下並提示（不會替你開啟 AutoRetainer）\n- 載入插件、進區、登入都不會自己開始；取消勾選、/hoardfarm stop 或 TC Toolbox 的急停指令 /tcstopall 可立即停下\n- 不會把任何資料送給原作者或第三方\n- 需搭配 vnavmesh",
     "InternalName": "HoardFarm",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 13,
